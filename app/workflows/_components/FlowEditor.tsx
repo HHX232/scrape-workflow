@@ -7,6 +7,7 @@ import {
   Connection,
   Controls,
   Edge,
+  getOutgoers,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -15,6 +16,7 @@ import {
 import type { DragEvent } from 'react'
 
 import { createFlowNode } from '@/lib/workflow/createFlowNode'
+import { TaskRegistry } from '@/lib/workflow/task/registry'
 import { AppNode } from '@/types/appNode'
 import { TaskType } from '@/types/TaskType'
 import '@xyflow/react/dist/style.css'
@@ -92,6 +94,62 @@ export default function FlowEditor({workflow}: {workflow: Workflow}) {
    
     [setEdges, nodes, updateNodeData]
   )
+const isValidConnection = useCallback((connection: Edge | Connection)=>{
+  if(connection.source === connection.target) {
+    return false;
+  }
+  const source = nodes.find(node => node.id === connection.source);
+  const target = nodes.find(node => node.id === connection.target);
+  if (!source || !target) {
+    console.log('invalid connection source or target', connection);
+    return false;
+  }
+  
+  const sourceTask = TaskRegistry[source.data.type]
+  const targetTask = TaskRegistry[target.data.type]
+  
+  const output = sourceTask?.outputs?.find(output => output.name === connection.sourceHandle);
+  
+  
+  const targetHandleName = connection.targetHandle?.includes('-input-') 
+    ? connection.targetHandle.split('-input-')[1]?.trim() 
+    : connection.targetHandle;
+  
+  const input = targetTask?.inputs?.find(input => input.name.trim() === targetHandleName);
+  
+ 
+  if(input?.type !== output?.type) {
+    console.log('Type mismatch:', input?.type, output?.type);
+    return false;
+  }
+
+  const hasCycle = (node: AppNode, visited = new Set<string>()): boolean => {
+
+    if (visited.has(node.id)) {
+        return false;
+    }
+    
+    visited.add(node.id);
+    
+    const outgoers = getOutgoers(node, nodes, edges);
+    
+    for (const outgoer of outgoers) {
+       
+        if (outgoer.id === connection.source) {
+            return true;
+        }
+        
+        if (hasCycle(outgoer, visited)) {
+            return true;
+        }
+    }
+    
+    return false;
+};
+
+  const detectedCycle = hasCycle(target)
+  return !detectedCycle
+}, [nodes, edges])
 
   return (
     <main className=' w-full h-full'>
@@ -105,6 +163,7 @@ export default function FlowEditor({workflow}: {workflow: Workflow}) {
         edgeTypes={edgeTypes}
         snapToGrid
         // fitView
+        isValidConnection={isValidConnection}
         fitViewOptions={fitViewOptions}
         onDragOver={onDragOver}
         onDrop={onDrop}
