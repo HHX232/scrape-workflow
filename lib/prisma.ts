@@ -5,11 +5,7 @@ const prismaClientSingleton = () => {
   const dbPath = path.resolve(process.cwd(), "prisma", "dev.db")
   
   return new PrismaClient({
-    datasources: {
-      db: {
-        url: `file:${dbPath}`
-      }
-    }
+    datasourceUrl: `file:${dbPath}`
   })
 }
 

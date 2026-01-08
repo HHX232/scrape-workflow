@@ -15,3 +15,8 @@ export interface ParamProps {
    value?:string
    updateNodeParamValue?: (value:string)=>void
 }
+
+export type AppNodeMissingInputs = {
+   nodeId: string;
+   missingInputs: string[];
+}
