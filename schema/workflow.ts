@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 
 export const createWorkFlowSchema = z.object({
@@ -7,3 +7,9 @@ export const createWorkFlowSchema = z.object({
 })
 
 export type createWorkFlowSchemaType = z.infer<typeof createWorkFlowSchema>
+
+export const duplicateWorkflowSchema = createWorkFlowSchema.extend({
+  workflowId: z.string(),
+});
+
+export type duplicateWorkflowSchemaType = z.infer<typeof duplicateWorkflowSchema>

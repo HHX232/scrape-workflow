@@ -32,10 +32,11 @@ export default function ExecutionViewer({initialData}: {initialData: ExecutionDa
     refetchInterval: (q) => (q.state?.data?.status === WorkflowExecutionStatus.RUNNING ? 1000 : false)
   })
   const phaseDetails = useQuery({
-    queryKey: ['phase-details', selectedPhases],
+    queryKey: ['phase-details', selectedPhases, query.data?.status],
     queryFn: () => GetWorkflowPhaseDetails(selectedPhases!),
     enabled: !!selectedPhases
   })
+
   const isRunning = query.data?.status === WorkflowExecutionStatus.RUNNING
   useEffect(()=>{
 const phases = query.data?.phases

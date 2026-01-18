@@ -8,6 +8,7 @@ interface Props{
    side?: 'top' | 'right' | 'bottom' | 'left'
 }
 export default function TooltipWrapper(props: Props){
+   if(!props.content) return props.children
    return <TooltipProvider delayDuration={0}>
       <Tooltip>
          <TooltipTrigger asChild>{props.children}</TooltipTrigger>

@@ -9,12 +9,43 @@ import { TaskType } from '@/types/TaskType'
 export default function TaskMenu() {
    
   return <aside className='w-[340px] min-w-[340px] max-w-[340px] border-r-2 border-separate h-full p-2'>
-<Accordion type='multiple' className='w-full' defaultValue={['extraction']}>
+<Accordion type='multiple' className='w-full' defaultValue={['extraction', 'interactions','timing', 'results', 'data storage']}>
    <AccordionItem value='extraction'>
       <AccordionTrigger className='font-bold'>Extraction</AccordionTrigger>
       <AccordionContent className='flex flex-col gap-1'>
          <TaskMenuBtn taskType={TaskType.PAGE_TO_HTML}></TaskMenuBtn>
          <TaskMenuBtn taskType={TaskType.EXTRACT_TEXT_FROM_ELEMENT}></TaskMenuBtn>
+         <TaskMenuBtn taskType={TaskType.EXTRACT_DATA_WITH_AI}></TaskMenuBtn>
+        
+      </AccordionContent>
+   </AccordionItem>
+   {/* --------- */}
+   <AccordionItem value='interactions'>
+      <AccordionTrigger className='font-bold'>User interactions</AccordionTrigger>
+      <AccordionContent className='flex flex-col gap-1'>
+         <TaskMenuBtn taskType={TaskType.FILL_INPUT}></TaskMenuBtn>
+         <TaskMenuBtn taskType={TaskType.CLICK_ELEMENT}></TaskMenuBtn>
+         
+      </AccordionContent>
+   </AccordionItem>
+    {/* --------- */}
+   <AccordionItem value='timing'>
+      <AccordionTrigger className='font-bold'>Timing controls</AccordionTrigger>
+      <AccordionContent className='flex flex-col gap-1'>
+         <TaskMenuBtn taskType={TaskType.WAIT_FOR_ELEMENT}></TaskMenuBtn>
+      </AccordionContent>
+   </AccordionItem>
+   <AccordionItem value='data storage'>
+      <AccordionTrigger className='font-bold'>Data storage</AccordionTrigger>
+      <AccordionContent className='flex flex-col gap-1'>
+         <TaskMenuBtn taskType={TaskType.READ_PROPERTY_FROM_JSON}></TaskMenuBtn>
+         <TaskMenuBtn taskType={TaskType.ADD_PROPERTY_TO_JSON}></TaskMenuBtn>
+      </AccordionContent>
+   </AccordionItem>
+   <AccordionItem value='results'>
+      <AccordionTrigger className='font-bold'>Result delivery</AccordionTrigger>
+      <AccordionContent className='flex flex-col gap-1'>
+         <TaskMenuBtn taskType={TaskType.DELIVER_VIA_WEBHOOK}></TaskMenuBtn>
       </AccordionContent>
    </AccordionItem>
 </Accordion>

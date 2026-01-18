@@ -1,6 +1,6 @@
-import {ExecutionEnviroment} from '@/types/Enviroment'
+import { ExecutionEnviroment } from '@/types/Enviroment'
 import puppeteer from 'puppeteer'
-import {LaunchBrowserTask} from '../task/LaunchBrowser'
+import { LaunchBrowserTask } from '../task/LaunchBrowser'
 
 export async function LaunchBrowserExecutor(
   enviroment: ExecutionEnviroment<typeof LaunchBrowserTask>
@@ -9,7 +9,7 @@ export async function LaunchBrowserExecutor(
     const websiteUrl = enviroment.getInput('Website Url')
     const browser = await puppeteer.launch({
       // Аня : показать открытие браузера
-      headless: true
+      headless: false
     })
     enviroment.log.info('Browser launched')
     enviroment.setBrowser(browser)
