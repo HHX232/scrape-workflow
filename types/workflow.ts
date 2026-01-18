@@ -41,5 +41,6 @@ export enum WorkflowExecutionStatus {
 export enum WorkflowExecutionTrigger {
   MANUAL = 'MANUAL',
   SCHEDULED = 'SCHEDULED',
-  API = 'API'
+  API = 'API',
+  CRON = 'CRON'
 }

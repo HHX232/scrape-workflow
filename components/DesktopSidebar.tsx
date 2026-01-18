@@ -7,6 +7,7 @@ import { useState } from 'react'
 import Logo from './Logo'
 import { Button, buttonVariants } from './ui/button'
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet'
+import { UserAvailableCreditsBadge } from './UserAvailableCreditsBadge'
 
 export default function DesktopSidebar() {
   const routes = [
@@ -46,7 +47,7 @@ export default function DesktopSidebar() {
       <div className='flex items-center justify-center gap-2 border-b-[1px] border-separate p-4 '>
         <Logo />
       </div>
-      <div className=' p-2'>TODO CREDITS</div>
+      <div className='p-2 flex justify-between items-center'><UserAvailableCreditsBadge/></div>
       <div className='flex flex-col p-2'>
         {routes.map((r) => {
           return (
@@ -110,6 +111,7 @@ export function MobileSidebar() {
           </SheetTrigger>
           <SheetContent side={'left'} className='w-[400px] sm:w-[540px] space-y-4'>
             <Logo />
+            <UserAvailableCreditsBadge/>
             <div className='flex flex-col gap-1'>
               {routes.map((r) => {
                 return (
