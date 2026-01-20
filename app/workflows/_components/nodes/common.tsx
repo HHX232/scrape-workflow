@@ -7,4 +7,5 @@ export const colorForHandle:Record<TaskParamType, string> = {
    [TaskParamType.BOOLEAN]: '!bg-rose-400',
    [TaskParamType.SELECT]: '!bg-rose-400',
    [TaskParamType.CREDENTIAL]: '!bg-teal-400',
+   [TaskParamType.IMAGE_FILE]: '!bg-teal-400',
 }

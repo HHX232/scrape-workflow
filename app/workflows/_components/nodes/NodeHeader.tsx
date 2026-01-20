@@ -14,12 +14,12 @@ export default function NodeHeader({taskType, nodeId}: {taskType: TaskType, node
   const {deleteElements, getNode, addNodes} = useReactFlow()
   return (
     <div className='flex items-center gap-2 p-2'>
-      <task.icon size={20} />
+     {task?.icon && <task.icon size={20} />}
       <div className='flex justify-between items-center w-full '>
-        <p className='text-sc font-bold uppercase text-muted-foreground'>{task.label}</p>
+        <p className='text-sc font-bold uppercase text-muted-foreground'>{task?.label}</p>
 
         <div className='flex gap-1 items-center'>
-          {task.isEntryPoint && (
+          {task?.isEntryPoint && (
             <Badge className='gap-2 h-[26px] flex items-center text-xs'>
               {/* <CoinsIcon size={20} /> */}
               Entry point
@@ -27,9 +27,9 @@ export default function NodeHeader({taskType, nodeId}: {taskType: TaskType, node
           )}
           <Badge className='gap-2 flex items-center text-xs'>
             <CoinsIcon size={20}/>
-            {task.credits} 
+            {task?.credits} 
           </Badge>
-          {!task.isEntryPoint && <>
+          {!task?.isEntryPoint && <>
           <Button onClick={()=>{
             deleteElements({nodes:[{id:nodeId}]})
           }} 

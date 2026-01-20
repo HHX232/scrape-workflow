@@ -10,6 +10,11 @@ export enum TaskType {
   READ_PROPERTY_FROM_JSON = 'READ_PROPERTY_FROM_JSON',
   ADD_PROPERTY_TO_JSON = 'ADD_PROPERTY_TO_JSON',
   NAVIGATE_URL = 'NAVIGATE_URL',
+  SCROLL_TO_ELEMENT = 'SCROLL_TO_ELEMENT',
+  EXTRACT_TEXT_FROM_ELEMENTS = 'EXTRACT_TEXT_FROM_ELEMENTS',
+  TAKE_SCREENSHOT = 'TAKE_SCREENSHOT',
+  DOWNLOAD_IMAGES = 'DOWNLOAD_IMAGES',
+  SAVE_SCREENSHOT = 'SAVE_SCREENSHOT'
 }
 export enum TaskParamType {
   STRING = 'STRING',
@@ -17,7 +22,8 @@ export enum TaskParamType {
   BOOLEAN = 'BOOLEAN',
   BROWSER_INSTANCE = 'BROWSER_INSTANCE',
   SELECT = 'SELECT',
-  CREDENTIAL = 'CREDENTIAL'
+  CREDENTIAL = 'CREDENTIAL',
+  IMAGE_FILE = 'IMAGE_FILE'
 }
 
 export interface TaskParam {
@@ -28,4 +34,22 @@ export interface TaskParam {
   hideHandle?: boolean
   value?: string
   [key: string]: any
+}
+
+export interface ImageFile {
+  data: string // base64 encoded image data
+  format: 'png' | 'jpg' | 'jpeg' | 'webp' | 'gif'
+  width?: number
+  height?: number
+  url?: string // original URL if downloaded from web
+  filename?: string
+  size?: number // size in bytes
+}
+
+export interface ImageMetadata {
+  src: string
+  alt?: string
+  width?: string
+  height?: string
+  title?: string
 }
