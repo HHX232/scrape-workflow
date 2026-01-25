@@ -14,7 +14,6 @@ export async function UpdateWorkflow({
    callback?: () => void
 }){
    const {userId} = auth()
-  await waitFor(1500)
 
    if(!userId){
       throw new Error('Unauthorized')

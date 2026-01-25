@@ -54,7 +54,7 @@ export async function ExtractDataWithAIExecutor(
         {role: 'user', content: prompt}
       ],
       temperature: 1,
-      max_tokens: 1000
+      max_tokens: 5000
     })
     
     enviroment.log.info('Prompt tokens: ' + `${response.usage?.prompt_tokens}`)

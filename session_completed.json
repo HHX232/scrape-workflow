@@ -1,0 +1,141 @@
+{
+   "id": "cs_test_a1F2trvBvOYAOWcjtof71Ufa2SJJWvR7aQJJxwuj2AUoq3NZidYE5J06ZL",
+   "object": "checkout.session",
+   "adaptive_pricing": {
+      "enabled": true
+   },
+   "after_expiration": null,
+   "allow_promotion_codes": null,
+   "amount_subtotal": 3999,
+   "amount_total": 3999,
+   "automatic_tax": {
+      "enabled": false,
+      "liability": null,
+      "provider": null,
+      "status": null
+   },
+   "billing_address_collection": null,
+   "branding_settings": {
+      "background_color": "#ffffff",
+      "border_style": "rounded",
+      "button_color": "#0074d4",
+      "display_name": "scrape sandbox",
+      "font_family": "default",
+      "icon": null,
+      "logo": null
+   },
+   "cancel_url": "http://localhost:3000/billing",
+   "client_reference_id": null,
+   "client_secret": null,
+   "collected_information": {
+      "business_name": null,
+      "individual_name": null,
+      "shipping_details": null
+   },
+   "consent": null,
+   "consent_collection": null,
+   "created": 1769011174,
+   "currency": "usd",
+   "currency_conversion": null,
+   "custom_fields": [],
+   "custom_text": {
+      "after_submit": null,
+      "shipping_address": null,
+      "submit": null,
+      "terms_of_service_acceptance": null
+   },
+   "customer": "cus_TpjHnGhTUYiodC",
+   "customer_account": null,
+   "customer_creation": "if_required",
+   "customer_details": {
+      "address": {
+         "city": null,
+         "country": "BY",
+         "line1": null,
+         "line2": null,
+         "postal_code": null,
+         "state": null
+      },
+      "business_name": null,
+      "email": "tisevichnikita82@gmail.com",
+      "individual_name": null,
+      "name": "nb",
+      "phone": null,
+      "tax_exempt": "none",
+      "tax_ids": []
+   },
+   "customer_email": null,
+   "discounts": [],
+   "expires_at": 1769097574,
+   "invoice": "in_1Ss3p5P17EXRNCTay208RKRp",
+   "invoice_creation": {
+      "enabled": true,
+      "invoice_data": {
+         "account_tax_ids": null,
+         "custom_fields": null,
+         "description": null,
+         "footer": null,
+         "issuer": {
+            "type": "self"
+         },
+         "metadata": {},
+         "rendering_options": null
+      }
+   },
+   "livemode": false,
+   "locale": null,
+   "metadata": {
+      "userId": "user_32YIAqVb1hZQSDKwjMaGdGhPawW",
+      "packId": "MEDIUM"
+   },
+   "mode": "payment",
+   "origin_context": null,
+   "payment_intent": "pi_3Ss3p3P17EXRNCTa0QfJhr2c",
+   "payment_link": null,
+   "payment_method_collection": "if_required",
+   "payment_method_configuration_details": {
+      "id": "pmc_1Ss3A8P17EXRNCTaUb1LNMBx",
+      "parent": null
+   },
+   "payment_method_options": {
+      "card": {
+         "request_three_d_secure": "automatic"
+      }
+   },
+   "payment_method_types": [
+      "card",
+      "link",
+      "cashapp",
+      "amazon_pay",
+      "crypto"
+   ],
+   "payment_status": "paid",
+   "permissions": null,
+   "phone_number_collection": {
+      "enabled": false
+   },
+   "recovered_from": null,
+   "saved_payment_method_options": {
+      "allow_redisplay_filters": [
+         "always"
+      ],
+      "payment_method_remove": "disabled",
+      "payment_method_save": null
+   },
+   "setup_intent": null,
+   "shipping_address_collection": null,
+   "shipping_cost": null,
+   "shipping_options": [],
+   "status": "complete",
+   "submit_type": null,
+   "subscription": null,
+   "success_url": "http://localhost:3000/billing",
+   "total_details": {
+      "amount_discount": 0,
+      "amount_shipping": 0,
+      "amount_tax": 0
+   },
+   "ui_mode": "hosted",
+   "url": null,
+   "wallet_options": null
+}
