@@ -1,0 +1,68 @@
+export enum TaskType {
+  LAUNCH_BROWSER = 'LAUNCH_BROWSER',
+  PAGE_TO_HTML = 'PAGE_TO_HTML',
+  EXTRACT_TEXT_FROM_ELEMENT = 'EXTRACT_TEXT_FROM_ELEMENT',
+  FILL_INPUT = 'FILL_INPUT',
+  CLICK_ELEMENT = 'CLICK_ELEMENT',
+  WAIT_FOR_ELEMENT = 'WAIT_FOR_ELEMENT',
+  DELIVER_VIA_WEBHOOK = 'DELIVER_VIA_WEBHOOK',
+  EXTRACT_DATA_WITH_AI = 'EXTRACT_DATA_WITH_AI',
+  READ_PROPERTY_FROM_JSON = 'READ_PROPERTY_FROM_JSON',
+  ADD_PROPERTY_TO_JSON = 'ADD_PROPERTY_TO_JSON',
+  NAVIGATE_URL = 'NAVIGATE_URL',
+  SCROLL_TO_ELEMENT = 'SCROLL_TO_ELEMENT',
+  EXTRACT_TEXT_FROM_ELEMENTS = 'EXTRACT_TEXT_FROM_ELEMENTS',
+  DOWNLOAD_PDF = 'DOWNLOAD_PDF',
+  EXTRACT_TEXT_FROM_PDF = 'EXTRACT_TEXT_FROM_PDF',
+  EXTRACT_TABLES_FROM_PDF = 'EXTRACT_TABLES_FROM_PDF',
+  EXTRACT_IMAGES_FROM_PDF = 'EXTRACT_IMAGES_FROM_PDF',
+  SAVE_IMAGES_TO_ZIP = 'SAVE_IMAGES_TO_ZIP',
+  SAVE_TABLES_AS_EXCEL = 'SAVE_TABLES_AS_EXCEL',
+  SAVE_SCREENSHOT = 'SAVE_SCREENSHOT',
+  TAKE_SCREENSHOT = 'TAKE_SCREENSHOT',
+
+  FOR_EACH = 'FOR_EACH',
+  ACCUMULATE_RESULTS = 'ACCUMULATE_RESULTS',
+
+  MERGE_TEXTS_TO_JSON = 'MERGE_TEXTS_TO_JSON',
+
+  EXTRACT_LINKS = 'EXTRACT_LINKS',
+}
+
+export enum TaskParamType {
+  STRING = 'STRING',
+  NUMBER = 'NUMBER',
+  BOOLEAN = 'BOOLEAN',
+  BROWSER_INSTANCE = 'BROWSER_INSTANCE',
+  SELECT = 'SELECT',
+  CREDENTIAL = 'CREDENTIAL',
+  FILE = 'FILE'
+}
+
+export interface TaskParam {
+  name: string
+  type: TaskParamType
+  helpText?: string
+  required?: boolean
+  hideHandle?: boolean
+  value?: string
+  [key: string]: any
+}
+
+export interface ImageFile {
+  data: string
+  format: 'png' | 'jpg' | 'jpeg' | 'webp' | 'gif'
+  width?: number
+  height?: number
+  url?: string
+  filename?: string
+  size?: number
+}
+
+export interface ImageMetadata {
+  src: string
+  alt?: string
+  width?: string
+  height?: string
+  title?: string
+}
