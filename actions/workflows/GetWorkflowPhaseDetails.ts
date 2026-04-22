@@ -1,7 +1,7 @@
 'use server'
 
-import prisma from "@/lib/prisma"
-import { auth } from "@clerk/nextjs/server"
+import { auth } from "@/components/hooks/auth";
+import prisma from "@/lib/prisma";
 
 export async function GetWorkflowPhaseDetails(phaseId: string) {
     const {userId} = auth()

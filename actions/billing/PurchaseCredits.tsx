@@ -1,10 +1,10 @@
 'use server'
 
-import { getAppUrl } from '@/lib/appUrl'
-import { stripe } from '@/lib/stripe/stripe'
-import { PackId, getCreditsPack } from '@/types/billing'
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+import { auth } from "@/components/hooks/auth";
+import { getAppUrl } from '@/lib/appUrl';
+import { stripe } from '@/lib/stripe/stripe';
+import { PackId, getCreditsPack } from '@/types/billing';
+import { redirect } from 'next/navigation';
 
 export async function PurchaseCredits(packId: PackId) {
   const {userId} = auth()

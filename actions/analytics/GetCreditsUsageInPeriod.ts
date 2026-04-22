@@ -1,8 +1,8 @@
+import { auth } from "@/components/hooks/auth";
 import { PeriodToDateRange } from "@/lib/helper/date";
 import prisma from "@/lib/prisma";
 import { Period } from "@/types/analitycs";
 import { ExecutionStatus } from "@/types/workflow";
-import { auth } from "@clerk/nextjs/server";
 import { eachDayOfInterval, format } from "date-fns";
 
 type Stats =  Record<string, {success: number; failed: number}>

@@ -1,10 +1,9 @@
 'use server'
 
-import { waitFor } from "@/lib/helper/waitFor"
-import prisma from "@/lib/prisma"
-import { WorkflowStatus } from "@/types/workflow"
-import { auth } from "@clerk/nextjs/server"
-import { revalidatePath } from "next/cache"
+import { auth } from "@/components/hooks/auth";
+import prisma from "@/lib/prisma";
+import { WorkflowStatus } from "@/types/workflow";
+import { revalidatePath } from "next/cache";
 
 export async function UpdateWorkflow({
    id, definition, callback

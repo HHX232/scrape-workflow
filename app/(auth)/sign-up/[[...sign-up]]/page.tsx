@@ -1,5 +1,5 @@
-import { SignUp } from '@clerk/nextjs'
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <SignUp />
+  redirect('/api/auth/set-user?userId=user_local_dev')
 }

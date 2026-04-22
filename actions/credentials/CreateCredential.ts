@@ -1,10 +1,11 @@
 'use server'
 
+import { auth } from "@/components/hooks/auth";
 import prisma from "@/lib/prisma";
 import { symmetricEncrypt } from "@/lib/symmetricEncrypt";
 import { createCredentialSchema, createCredentialSchemaType } from "@/schema/credential";
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+;
 
 export async function CreateCredential(form: createCredentialSchemaType) {
   const { success, data } = createCredentialSchema.safeParse(form);

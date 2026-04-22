@@ -1,6 +1,6 @@
-import prisma from "@/lib/prisma"
-import { auth } from "@clerk/nextjs/server"
-import Editor from "../../_components/Editor"
+import { auth } from "@/components/hooks/auth";
+import prisma from "@/lib/prisma";
+import Editor from "../../_components/Editor";
 
 
 export default async function page({params}: {params: {workflowId: string}}) {

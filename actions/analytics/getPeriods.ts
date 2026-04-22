@@ -1,8 +1,8 @@
 'use server'
 
-import prisma from '@/lib/prisma'
-import { Period } from '@/types/analitycs'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from "@/components/hooks/auth";
+import prisma from '@/lib/prisma';
+import { Period } from '@/types/analitycs';
 
 export async function GetPeriods() {
   const {userId} = auth()

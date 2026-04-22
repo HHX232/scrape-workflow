@@ -1,10 +1,11 @@
 'use server'
 
+import { auth } from "@/components/hooks/auth";
 import prisma from "@/lib/prisma";
 import { duplicateWorkflowSchema, duplicateWorkflowSchemaType } from "@/schema/workflow";
 import { WorkflowStatus } from "@/types/workflow";
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+;
 
 export async function DuplicateWorkflow(form: duplicateWorkflowSchemaType) {
   const { success, data } = duplicateWorkflowSchema.safeParse(form);
