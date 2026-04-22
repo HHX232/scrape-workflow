@@ -1,5 +1,5 @@
-import {SetupUser} from '@/actions/billing/SetupUser'
-import {waitFor} from '@/lib/helper/waitFor'
+import { SetupUser } from '@/actions/billing/SetupUser'
+export const dynamic = 'force-dynamic'
 
 async function SetupPage() {
  

@@ -25,6 +25,7 @@ import { SaveTablesAsExcel } from "./SaveTablesAsExcel";
 import { ScrollToElementTask } from "./ScrollToElement";
 import { TakeScreenshot } from "./TakeScreenshot";
 import { WaitForElementTask } from "./WaitForElement";
+import { DownloadImages } from "./DownloadImages";
 
 type Registry = {
    [K in TaskType]: WorkflowTask & {type: K}
@@ -56,5 +57,6 @@ export const TaskRegistry: Registry = {
   [TaskType.EXTRACT_TEXT_FROM_ELEMENT]: ExtractTextFromElement,
   [TaskType.SAVE_SCREENSHOT]: SaveScreenshot,
   [TaskType.TAKE_SCREENSHOT]: TakeScreenshot,
+  [TaskType.DOWNLOAD_IMAGES]: DownloadImages,
 }
    

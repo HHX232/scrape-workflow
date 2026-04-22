@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic'
+
 import prisma from '@/lib/prisma'
-import {ExecuteWorkflow} from '@/lib/workflow/ExecuteWorkflow'
-import {TaskRegistry} from '@/lib/workflow/task/registry'
-import {WorkflowExecutionPlan, WorkflowExecutionStatus, WorkflowExecutionTrigger} from '@/types/workflow'
+import { ExecuteWorkflow } from '@/lib/workflow/ExecuteWorkflow'
+import { TaskRegistry } from '@/lib/workflow/task/registry'
+import { WorkflowExecutionPlan, WorkflowExecutionStatus, WorkflowExecutionTrigger } from '@/types/workflow'
 import parser from 'cron-parser'
-import {timingSafeEqual} from 'crypto'
+import { timingSafeEqual } from 'crypto'
 
 function isValidSecret(secret: string) {
   const API_SECRET = process.env.API_SECRET

@@ -1,6 +1,8 @@
-import {getAppUrl} from '@/lib/appUrl'
+export const dynamic = 'force-dynamic'
+
+import { getAppUrl } from '@/lib/appUrl'
 import prisma from '@/lib/prisma'
-import {WorkflowStatus} from '@/types/workflow'
+import { WorkflowStatus } from '@/types/workflow'
 
 export async function GET(request: Request) {
   const now = new Date()

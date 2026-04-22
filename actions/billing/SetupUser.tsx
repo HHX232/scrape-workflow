@@ -17,6 +17,6 @@ export async function SetupUser() {
       },
     });
   }
-}
 
-redirect("/");
+  redirect("/"); 
+}

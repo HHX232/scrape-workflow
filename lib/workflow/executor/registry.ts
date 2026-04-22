@@ -10,6 +10,7 @@ import { ExtractDataWithAIExecutor } from "./ExtractDataWithAIExecutor";
 import { ExtractImagesFromPdfExecutor } from "./ExtractImagesFromPdfExecutor";
 import { ExtractLinksExecutor } from "./ExtractLinksExecutor";
 import { ExtractTablesFromPdfExecutor } from "./ExtractTablesFromPdfExecutor";
+import { ExtractTextFromElementExecutor } from "./ExtractTextFromElementExecutor";
 import { ExtractTextFromElementsExecutor } from "./ExtractTextFromElementsExecutor";
 import { ExtractTextFromPdfExecutor } from "./ExtractTextFromPdfExecutor";
 import { FillInputExecutor } from "./FillInputExecutor";
@@ -25,7 +26,7 @@ import { SaveTablesAsExcelExecutor } from "./SaveTablesAsExcelExecutor";
 import { ScrollToElementExecutor } from "./ScrollToElementExecutor";
 import { TakeScreenshotExecutor } from "./TakeScreenshotExecutor";
 import { WaitForElementExecutor } from "./WaitForElementExecutor";
-import { ExtractTextFromElementExecutor } from "./ExtractTextFromElementExecutor";
+import { DownloadImagesExecutor } from "./DownloadImagesExecutor";
 
 type ExecutorFn<T extends WorkflowTask> = (enviroment:ExecutionEnviroment<T>) => Promise<boolean>
 
@@ -57,5 +58,6 @@ export const ExecutorRegistry:RegistryType = {
    MERGE_TEXTS_TO_JSON:MergeTextsToJsonExecutor,
    EXTRACT_LINKS:ExtractLinksExecutor,
    SAVE_SCREENSHOT:SaveScreenshotExecutor,
-   TAKE_SCREENSHOT:TakeScreenshotExecutor
+   TAKE_SCREENSHOT:TakeScreenshotExecutor,
+   DOWNLOAD_IMAGES:DownloadImagesExecutor
 }

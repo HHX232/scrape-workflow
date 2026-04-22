@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { HandleCheckoutSessionCompleted } from '@/lib/stripe/HandleCheckoutSessionCompleted'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
