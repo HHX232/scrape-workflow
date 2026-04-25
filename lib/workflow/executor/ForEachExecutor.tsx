@@ -5,6 +5,9 @@ export async function ForEachExecutor(
   enviroment: ExecutionEnviroment<typeof ForEachTask>
 ): Promise<boolean> {
   try {
+    const loopEnv = enviroment as any
+    const index: number = loopEnv.__forEachIndex ?? 0
+
     const itemsRaw = enviroment.getInput('Items')
     if (!itemsRaw) {
       enviroment.log.error('input -> Items is not defined')
@@ -20,8 +23,6 @@ export async function ForEachExecutor(
       return false
     }
 
-    const loopEnv = enviroment as any
-    const index: number = loopEnv.__forEachIndex ?? 0
     const currentItem = items[index]
 
     if (currentItem === undefined) {

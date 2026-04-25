@@ -24,22 +24,32 @@ export async function ExtractTextFromElementExecutor(
     
     // enviroment.log.info(`HTML length: ${html.length} characters`)
     
+    const joinMultiple = enviroment.getInput('Join Multiple') === 'true'
+
     const $ = cheerio.load(html)
-    const element = $(selector)
-    if (!element || element?.length === 0) {
+    const elements = $(selector)
+    if (!elements || elements.length === 0) {
       enviroment.log.error(`No elements found with selector: ${selector}`)
       return false
     }
 
-    // enviroment.log.info(`Found ${element.length} element(s) with selector`)
+    let extractedText: string
+    if (joinMultiple && elements.length > 1) {
+      const parts: string[] = []
+      elements.each((_: number, el: any) => {
+        const t = $(el).text().trim()
+        if (t) parts.push(t)
+      })
+      extractedText = parts.join('\n\n')
+    } else {
+      extractedText = elements.text().trim()
+    }
 
-    const extractedText = element.text()
-    if(!extractedText){
-      enviroment.log.error("Element has no text content")
+    if (!extractedText) {
+      enviroment.log.error('Element has no text content')
       return false
     }
-    
-    // enviroment.log.info(`Successfully extracted text: ${extractedText.substring(0, 100)}...`)
+
     enviroment.setOutput('Extracted text', extractedText)
     return true
   } catch (error) {

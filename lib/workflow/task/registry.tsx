@@ -25,7 +25,10 @@ import { SaveTablesAsExcel } from "./SaveTablesAsExcel";
 import { ScrollToElementTask } from "./ScrollToElement";
 import { TakeScreenshot } from "./TakeScreenshot";
 import { WaitForElementTask } from "./WaitForElement";
-import { DownloadImages } from "./DownloadImages";
+import { DownloadImages } from "./DownloadImages"
+import { GetAllLinksInBoxTask } from "./GetAllLinksInBoxTask"
+import { ClickWhileVisibleTask } from "./ClickWhileVisibleTask"
+import { ExtractTableAsJsonTask } from "./ExtractTableAsJsonTask";
 
 type Registry = {
    [K in TaskType]: WorkflowTask & {type: K}
@@ -58,5 +61,8 @@ export const TaskRegistry: Registry = {
   [TaskType.SAVE_SCREENSHOT]: SaveScreenshot,
   [TaskType.TAKE_SCREENSHOT]: TakeScreenshot,
   [TaskType.DOWNLOAD_IMAGES]: DownloadImages,
+  [TaskType.GET_ALL_LINKS_IN_BOX]: GetAllLinksInBoxTask,
+  [TaskType.CLICK_WHILE_VISIBLE]: ClickWhileVisibleTask,
+  [TaskType.EXTRACT_TABLE_AS_JSON]: ExtractTableAsJsonTask,
 }
    

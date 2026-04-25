@@ -1,0 +1,143 @@
+.language_switcher {
+  position: relative;
+  display: inline-block;
+
+  .language_button {
+    background-color: #fff;
+    color: #333;
+    
+    &:hover{
+      border: 2px solid #77db99;
+    }
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    min-width: 140px;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+    &:hover {
+      background-color: #77db99;
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(119, 219, 153, 0.3);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    &:disabled {
+      cursor: wait;
+      pointer-events: none;
+    }
+
+    .arrow {
+      font-size: 12px;
+      transition: transform 0.3s ease;
+      display: inline-block;
+      
+      &.open {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  .language_dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background-color: #fff;
+
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    list-style: none;
+    padding: 4px;
+    margin: 0;
+    min-width: 140px;
+    z-index: 1000;
+    animation: slideDown 0.2s ease;
+
+    &:hover{
+      border: 2px solid #77db99;
+    }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    li {
+      margin: 0;
+      padding: 0;
+    }
+
+    .language_item {
+      width: 100%;
+      padding: 10px 12px;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      text-align: left;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      color: #333;
+      transition: all 0.2s ease;
+      display: block;
+
+      &.active {
+        background-color: #77db99;
+        color: #fff;
+        font-weight: 600;
+      }
+
+      &:hover {
+        background-color: #77db99;
+        color: #fff;
+
+      }
+
+      &:disabled {
+        cursor: wait;
+        pointer-events: none;
+      }
+
+      &:not(:last-child) {
+        margin-bottom: 2px;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .language_switcher {
+    .language_button {
+      padding: 8px 12px;
+      min-width: 120px;
+      font-size: 13px;
+    }
+
+    .language_dropdown {
+      min-width: 120px;
+
+      .language_item {
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+    }
+  }
+}

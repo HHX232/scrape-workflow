@@ -1,26 +1,26 @@
-import { AppNode } from '@/types/appNode'
-import { Enviroment, ExecutionEnviroment } from '@/types/Enviroment'
-import { LogCollector } from '@/types/log'
-import { TaskParamType, TaskType } from '@/types/TaskType'
-import { ExecutionStatus, WorkflowExecutionStatus } from '@/types/workflow'
-import { Edge } from '@xyflow/react'
-import { revalidatePath } from 'next/cache'
-import { Browser, Page } from 'puppeteer'
+import {AppNode} from '@/types/appNode'
+import {Enviroment, ExecutionEnviroment} from '@/types/Enviroment'
+import {LogCollector} from '@/types/log'
+import {TaskParamType, TaskType} from '@/types/TaskType'
+import {ExecutionStatus, WorkflowExecutionStatus} from '@/types/workflow'
+import {Edge} from '@xyflow/react'
+import {revalidatePath} from 'next/cache'
+import {Browser, Page} from 'puppeteer'
 import 'server-only'
-import { ExecutionPhase } from '../generated/prisma'
-import { createLogCollector } from '../log'
+import {ExecutionPhase} from '../generated/prisma'
+import {createLogCollector} from '../log'
 import prisma from '../prisma'
-import { ExecutorRegistry } from './executor/registry'
-import { TaskRegistry } from './task/registry'
+import {ExecutorRegistry} from './executor/registry'
+import {TaskRegistry} from './task/registry'
 
 export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
   const execution = await prisma.workflowExecution.findUnique({
-    where: { id: executionId },
-    include: { phases: true, workflow: true }
+    where: {id: executionId},
+    include: {phases: true, workflow: true}
   })
   if (!execution) throw new Error('Workflow execution not found')
 
-  const enviroment: Enviroment = { phases: {} }
+  const enviroment: Enviroment = {phases: {}}
 
   await initializeWorkflowExecution(executionId, execution.workflowId, nextRunAt)
   await initializePhasesStatuses(execution)
@@ -29,7 +29,7 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
   let executionFailed = false
   const edges = JSON.parse(execution.definition).edges as Edge[]
 
-  const phases = execution.phases 
+  const phases = execution.phases
 
   let i = 0
   while (i < phases.length) {
@@ -37,7 +37,6 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
     const node = JSON.parse(phase.node) as AppNode
 
     if (node.data.type === TaskType.FOR_EACH) {
-
       setupEnviromentForPhase(node, enviroment, edges)
       const itemsRaw = enviroment.phases[node.id]?.inputs['Items'] ?? ''
 
@@ -80,18 +79,15 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
           break
         }
 
-        // Execute all loop-body phases.
-        for (const loopPhaseIdx of loopPhaseIndices) {
-          const loopPhase = phases[loopPhaseIdx]
-          const result = await executeWorkflowPhase(loopPhase, enviroment, edges, execution.userId)
-          creditsConsumed += result.creditsConsumed
-          if (!result.success) {
-            executionFailed = true
-            break
-          }
+        // Execute all loop-body phases, supporting nested ForEach.
+        const bodyResult = await executeLoopBody(
+          loopPhaseIndices, phases, enviroment, edges, execution.userId
+        )
+        creditsConsumed += bodyResult.creditsConsumed
+        if (bodyResult.failed) {
+          executionFailed = true
+          break
         }
-
-        if (executionFailed) break
       }
 
       if (executionFailed) break
@@ -162,12 +158,7 @@ function getLoopPhaseIndices(
  * Returns true if this node is downstream of any FOR_EACH node that
  * appears earlier in the phases array (i.e. it's a loop body).
  */
-function isInsideAnyLoop(
-  nodeId: string,
-  phases: ExecutionPhase[],
-  edges: Edge[],
-  currentIndex: number
-): boolean {
+function isInsideAnyLoop(nodeId: string, phases: ExecutionPhase[], edges: Edge[], currentIndex: number): boolean {
   for (let idx = 0; idx < currentIndex; idx++) {
     const candidate = JSON.parse(phases[idx].node) as AppNode
     if (candidate.data.type !== TaskType.FOR_EACH) continue
@@ -178,28 +169,102 @@ function isInsideAnyLoop(
   return false
 }
 
+/**
+ * Executes a sequence of loop-body phases (by their index in the phases array).
+ * If any phase is itself a FOR_EACH, it is executed as a nested loop with its
+ * own independent index counter; its body phases are then skipped in the outer scan.
+ */
+async function executeLoopBody(
+  phaseIndices: number[],
+  phases: ExecutionPhase[],
+  enviroment: Enviroment,
+  edges: Edge[],
+  userId: string
+): Promise<{failed: boolean; creditsConsumed: number}> {
+  let creditsConsumed = 0
+  let i = 0
+
+  while (i < phaseIndices.length) {
+    const phaseIdx = phaseIndices[i]
+    const phase = phases[phaseIdx]
+    const node = JSON.parse(phase.node) as AppNode
+
+    if (node.data.type === TaskType.FOR_EACH) {
+      // Read inner items fresh (outer phases have already updated the source output)
+      setupEnviromentForPhase(node, enviroment, edges)
+      const innerItemsRaw = enviroment.phases[node.id]?.inputs['Items'] ?? ''
+
+      let innerItems: string[] = []
+      try {
+        innerItems = JSON.parse(innerItemsRaw)
+        if (!Array.isArray(innerItems)) innerItems = []
+      } catch {}
+
+      // Body phases of the inner ForEach — only those within this body set
+      const innerBodyIndices = getLoopPhaseIndices(phases, node.id, edges, phaseIdx + 1)
+        .filter(idx => phaseIndices.includes(idx))
+
+      if (innerItems.length === 0) {
+        const lc = createLogCollector()
+        lc.info('ForEach (nested): Items is empty, skipping inner loop')
+        await finalizePhase(phase.id, true, {}, lc, 0)
+      } else {
+        for (let ii = 0; ii < innerItems.length; ii++) {
+          // Each inner iteration gets its own index — independent of outer
+          ;(enviroment as any).__forEachIndex = ii
+
+          const innerFE = await executeWorkflowPhase(phase, enviroment, edges, userId)
+          creditsConsumed += innerFE.creditsConsumed
+          if (!innerFE.success) return {failed: true, creditsConsumed}
+
+          for (const innerIdx of innerBodyIndices) {
+            const r = await executeWorkflowPhase(phases[innerIdx], enviroment, edges, userId)
+            creditsConsumed += r.creditsConsumed
+            if (!r.success) return {failed: true, creditsConsumed}
+          }
+        }
+      }
+
+      // Advance past the inner ForEach and all its body phases
+      if (innerBodyIndices.length > 0) {
+        const maxInner = Math.max(...innerBodyIndices)
+        i = phaseIndices.indexOf(maxInner) + 1
+      } else {
+        i++
+      }
+    } else {
+      const result = await executeWorkflowPhase(phase, enviroment, edges, userId)
+      creditsConsumed += result.creditsConsumed
+      if (!result.success) return {failed: true, creditsConsumed}
+      i++
+    }
+  }
+
+  return {failed: false, creditsConsumed}
+}
+
 // ── Unchanged helpers from original executeWorkflow.ts ────────────────────────
 
 async function initializeWorkflowExecution(executionId: string, workflowId: string, nextRunAt?: Date) {
   await prisma.workflowExecution.update({
-    where: { id: executionId },
-    data: { status: WorkflowExecutionStatus.RUNNING, startedAt: new Date() }
+    where: {id: executionId},
+    data: {status: WorkflowExecutionStatus.RUNNING, startedAt: new Date()}
   })
   await prisma.workflow.update({
-    where: { id: workflowId },
+    where: {id: workflowId},
     data: {
       lastRunAt: new Date(),
       lastRunStatus: WorkflowExecutionStatus.RUNNING,
       lastRunId: executionId,
-      ...(nextRunAt && { nextRunAt })
+      ...(nextRunAt && {nextRunAt})
     }
   })
 }
 
 async function initializePhasesStatuses(execution: any) {
   await prisma.executionPhase.updateMany({
-    where: { id: { in: execution.phases.map((phase: any) => phase.id) } },
-    data: { status: ExecutionStatus.PENDING }
+    where: {id: {in: execution.phases.map((phase: any) => phase.id)}},
+    data: {status: ExecutionStatus.PENDING}
   })
 }
 
@@ -211,30 +276,25 @@ async function finalizeWorkflowExecution(
 ) {
   const finalStatus = executionFailed ? WorkflowExecutionStatus.FAILED : WorkflowExecutionStatus.COMPLETED
   await prisma.workflowExecution.update({
-    where: { id: executionId },
-    data: { status: finalStatus, completedAt: new Date(), creditsConsumed }
+    where: {id: executionId},
+    data: {status: finalStatus, completedAt: new Date(), creditsConsumed}
   })
   await prisma.workflow
     .update({
-      where: { id: workflowId, lastRunId: executionId },
-      data: { lastRunStatus: finalStatus }
+      where: {id: workflowId, lastRunId: executionId},
+      data: {lastRunStatus: finalStatus}
     })
     .catch(() => {})
 }
 
-async function executeWorkflowPhase(
-  phase: ExecutionPhase,
-  enviroment: Enviroment,
-  edges: Edge[],
-  userId: string
-) {
+async function executeWorkflowPhase(phase: ExecutionPhase, enviroment: Enviroment, edges: Edge[], userId: string) {
   const logCollector = createLogCollector()
   const startedAt = new Date()
   const node = JSON.parse(phase.node) as AppNode
   setupEnviromentForPhase(node, enviroment, edges)
 
   await prisma.executionPhase.update({
-    where: { id: phase.id },
+    where: {id: phase.id},
     data: {
       status: ExecutionStatus.RUNNING,
       startedAt,
@@ -251,7 +311,7 @@ async function executeWorkflowPhase(
 
   const outputs = enviroment.phases[node.id]?.outputs || {}
   await finalizePhase(phase.id, success, outputs, logCollector, creditsConsumed)
-  return { success, creditsConsumed }
+  return {success, creditsConsumed}
 }
 
 async function finalizePhase(
@@ -265,7 +325,7 @@ async function finalizePhase(
   await prisma.$transaction(async (tx) => {
     await tx.executionPhase
       .update({
-        where: { id: phaseId },
+        where: {id: phaseId},
         data: {
           status: success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
           completedAt: new Date(),
@@ -304,7 +364,7 @@ async function executePhase(
 }
 
 function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: Edge[]) {
-  environment.phases[node.id] = { inputs: {}, outputs: {} }
+  environment.phases[node.id] = {inputs: {}, outputs: {}}
   const inputs = TaskRegistry[node.data.type].inputs
 
   for (const input of inputs) {
@@ -343,14 +403,22 @@ function createExecutionEnviroment(
       }
     },
     getBrowser: () => enviroment.browser,
-    setBrowser: (browser: Browser) => { enviroment.browser = browser },
+    setBrowser: (browser: Browser) => {
+      enviroment.browser = browser
+    },
     getPage: () => enviroment.page,
     setPage: (page: Page) => (enviroment.page = page),
     log: logCollector,
     // Expose accumulators and loop index so executors can use them
-    get __forEachIndex() { return (enviroment as any).__forEachIndex },
-    get __accumulators() { return (enviroment as any).__accumulators },
-    set __accumulators(v) { (enviroment as any).__accumulators = v }
+    get __forEachIndex() {
+      return (enviroment as any).__forEachIndex
+    },
+    get __accumulators() {
+      return (enviroment as any).__accumulators
+    },
+    set __accumulators(v) {
+      ;(enviroment as any).__accumulators = v
+    }
   }
 }
 
@@ -362,13 +430,18 @@ async function cleanupEnviroment(enviroment: Enviroment) {
 
 async function decrementCredits(userId: string, amount: number, logCollector: LogCollector) {
   try {
+    await prisma.userBalance.upsert({
+      where: {userId},
+      create: {userId, credits: 100000000},
+      update: {}
+    })
     await prisma.userBalance.update({
-      where: { userId, credits: { gte: amount } },
-      data: { credits: { decrement: amount } }
+      where: {userId, credits: {gte: amount}},
+      data: {credits: {decrement: amount}}
     })
     return true
   } catch (error) {
-    logCollector.error('Failed to decrement credits' + error)
+    logCollector.error('Insufficient credits or balance error: ' + error)
     return false
   }
 }

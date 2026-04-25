@@ -21,6 +21,13 @@ export const ExtractTextFromElement = {
       type: TaskParamType.STRING,
       required: true,
       hideHandle: false
+    },
+    {
+      name: 'Join Multiple',
+      type: TaskParamType.BOOLEAN,
+      required: false,
+      hideHandle: true,
+      helpText: 'Если selector находит несколько элементов — соединить их текст через два переноса строки'
     }
   ] as const,
   outputs: [

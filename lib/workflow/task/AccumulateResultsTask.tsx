@@ -19,9 +19,9 @@ export const AccumulateResultsTask = {
     {
       name: 'Accumulator Key',
       type: TaskParamType.STRING,
-      required: true,
-      hideHandle: true,
-      helpText: 'Unique key to identify the accumulator (use the same key across loop iterations)',
+      required: false,
+      hideHandle: false,
+      helpText: 'Любая строка-ключ для аккумулятора. Один и тот же ключ на всех итерациях цикла (по умолчанию "default")',
       value: 'default'
     }
   ] as const,

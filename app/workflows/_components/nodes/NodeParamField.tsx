@@ -8,6 +8,7 @@ import CredentialsParam from './param/CredentialsParam'
 import SelectParam from './param/SelectParam'
 import StringParam from './param/StringParam'
 import FileParam from './param/FileParam'
+import BooleanParam from './param/BooleanParam'
 
 export default function NodeParamField({
   param,
@@ -70,6 +71,15 @@ export default function NodeParamField({
           updateNodeParamValue={updateNodeParamValue}
           disabled={disabled}
         ></FileParam>
+      )
+    case TaskParamType.BOOLEAN:
+      return (
+        <BooleanParam
+          param={param}
+          value={value}
+          updateNodeParamValue={updateNodeParamValue}
+          disabled={disabled}
+        />
       )
     default:
       return <p className='text-xs text-muted-foreground'>Not implemented</p>
