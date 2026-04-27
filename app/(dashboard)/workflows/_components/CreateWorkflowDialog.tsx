@@ -1,6 +1,5 @@
 'use client'
 
-import { CreateWorkflow } from '@/actions/workflows/createWorkflow'
 import CustomDialogHeader from '@/components/CustomDialogHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -11,13 +10,31 @@ import { createWorkFlowSchema, createWorkFlowSchemaType } from '@/schema/workflo
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { Layers2Icon, Loader2Icon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import z from 'zod'
 
+async function createWorkflowFetch(values: createWorkFlowSchemaType) {
+  console.log('[createWorkflowFetch] sending request, values:', JSON.stringify(values))
+  const res = await fetch('/api/workflows/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(values),
+  })
+  console.log('[createWorkflowFetch] response status:', res.status)
+  const json = await res.json()
+  console.log('[createWorkflowFetch] response body:', JSON.stringify(json))
+  if (!res.ok) {
+    throw new Error(json?.error ?? 'Failed to create workflow')
+  }
+  return json as { redirectUrl: string }
+}
+
 export default function CreateWorkflowDialog({triggerText}: {triggerText?: string}) {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
 
   const form = useForm<z.infer<typeof createWorkFlowSchema>>({
     resolver: zodResolver(createWorkFlowSchema),
@@ -25,14 +42,17 @@ export default function CreateWorkflowDialog({triggerText}: {triggerText?: strin
   })
 
   const {mutate, isPending} = useMutation({
-    mutationFn: CreateWorkflow,
-    onSuccess: ()=>{
+    mutationFn: createWorkflowFetch,
+    onSuccess: (data) => {
       toast.dismiss()
       toast.success('Workflow created successfully')
+      console.log('[CreateWorkflowDialog] success, redirecting to:', data.redirectUrl)
+      router.push(data.redirectUrl)
     },
-    onError:()=>{
+    onError: (err) => {
       toast.dismiss()
-      toast.error('Failed to create workflow')
+      console.error('[CreateWorkflowDialog] error:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to create workflow')
     }
   })
 
