@@ -90,6 +90,7 @@
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.87.4",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.16.1",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.3.4",
