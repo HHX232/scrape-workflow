@@ -1,12 +1,7 @@
 import { PrismaClient } from "@/lib/generated/prisma"
-import path from "path"
 
 const prismaClientSingleton = () => {
-  const dbPath = path.resolve(process.cwd(), "prisma", "dev.db")
-  
-  return new PrismaClient({
-    datasourceUrl: `file:${dbPath}`
-  })
+  return new PrismaClient()
 }
 
 declare global {
