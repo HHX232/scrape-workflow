@@ -13,30 +13,58 @@ import { redirect } from "next/navigation";
 
 
 export async function CreateWorkflow(form: createWorkFlowSchemaType){
-const {success, data} = createWorkFlowSchema.safeParse(form)
-if(!success){
-  throw new Error('Invalid form data')
-}
-const {userId} = auth()
-if(!userId){
-   throw new Error('Unauthorized')
-}
-const initialFlow : {nodes: AppNode[], edges:Edge[]}={nodes:[], edges:[]}
+  console.log('[CreateWorkflow] called with form:', JSON.stringify(form))
 
-initialFlow.nodes.push(createFlowNode(TaskType.LAUNCH_BROWSER))
-const result = await prisma.workflow.create({
-   data:{
-      userId,
-      status:WorkflowStatus.DRAFT,
-      definition:JSON.stringify(initialFlow),
-      name:data.name,
-      description:data.description || ''
-   }
-})
+  const {success, data} = createWorkFlowSchema.safeParse(form)
+  if(!success){
+    console.error('[CreateWorkflow] validation failed:', JSON.stringify(form))
+    throw new Error('Invalid form data')
+  }
+  console.log('[CreateWorkflow] form valid, data:', JSON.stringify(data))
 
-if(!result){
-   throw new Error('Failed to create workflow')
-}
+  let userId: string | undefined
+  try {
+    const authResult = auth()
+    userId = authResult.userId
+    console.log('[CreateWorkflow] auth userId:', userId)
+  } catch (e) {
+    console.error('[CreateWorkflow] auth() threw:', e)
+    throw new Error('Unauthorized')
+  }
 
-redirect(`/workflows/editor/${result.id}`)
+  if(!userId){
+    console.error('[CreateWorkflow] userId is empty after auth()')
+    throw new Error('Unauthorized')
+  }
+
+  const initialFlow : {nodes: AppNode[], edges:Edge[]}={nodes:[], edges:[]}
+  initialFlow.nodes.push(createFlowNode(TaskType.LAUNCH_BROWSER))
+  console.log('[CreateWorkflow] initialFlow nodes count:', initialFlow.nodes.length)
+
+  let result
+  try {
+    console.log('[CreateWorkflow] attempting prisma.workflow.create...')
+    result = await prisma.workflow.create({
+       data:{
+          userId,
+          status:WorkflowStatus.DRAFT,
+          definition:JSON.stringify(initialFlow),
+          name:data.name,
+          description:data.description || ''
+       }
+    })
+    console.log('[CreateWorkflow] created workflow id:', result?.id)
+  } catch (e: any) {
+    throw new Error(
+      `[CreateWorkflow] userId=${userId} name="${data.name}" | code=${e?.code} | ${e?.message} | meta=${JSON.stringify(e?.meta)}`
+    )
+  }
+
+  if(!result){
+    console.error('[CreateWorkflow] result is null/undefined after create')
+    throw new Error('Failed to create workflow')
+  }
+
+  console.log('[CreateWorkflow] success, redirecting to editor:', result.id)
+  redirect(`/workflows/editor/${result.id}`)
 }
