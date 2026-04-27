@@ -153,6 +153,7 @@ export default function TaskMenu() {
           <AccordionContent className='flex flex-col gap-1'>
             <TaskMenuBtn taskType={TaskType.READ_PROPERTY_FROM_JSON}></TaskMenuBtn>
             <TaskMenuBtn taskType={TaskType.ADD_PROPERTY_TO_JSON}></TaskMenuBtn>
+            <TaskMenuBtn taskType={TaskType.GET_ALL_FOR_PRICE}></TaskMenuBtn>
           </AccordionContent>
         </AccordionItem>
 

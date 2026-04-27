@@ -30,6 +30,7 @@ import { DownloadImagesExecutor } from "./DownloadImagesExecutor"
 import { GetAllLinksInBoxExecutor } from "./GetAllLinksInBoxExecutor"
 import { ClickWhileVisibleExecutor } from "./ClickWhileVisibleExecutor"
 import { ExtractTableAsJsonExecutor } from "./ExtractTableAsJsonExecutor";
+import { GetAllForPriceExecutor } from "./GetAllForPriceExecutor";
 
 type ExecutorFn<T extends WorkflowTask> = (enviroment:ExecutionEnviroment<T>) => Promise<boolean>
 
@@ -66,4 +67,5 @@ export const ExecutorRegistry:RegistryType = {
    GET_ALL_LINKS_IN_BOX:GetAllLinksInBoxExecutor,
    CLICK_WHILE_VISIBLE:ClickWhileVisibleExecutor,
    EXTRACT_TABLE_AS_JSON:ExtractTableAsJsonExecutor,
+   GET_ALL_FOR_PRICE:GetAllForPriceExecutor,
 }
