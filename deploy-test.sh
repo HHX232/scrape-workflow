@@ -7,8 +7,8 @@ IMAGE_TAG="test"
 DOCKERFILE="Dockerfile"
 OUTPUT_DIR="${HOME}/scrape-workflow"
 
-MAIN_SERVER="root@exporteru.com"
-REMOTE_WORK_DIR="/root/exporteru"
+MAIN_SERVER="exporteru@test.exporteru.com"
+REMOTE_WORK_DIR="~"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -31,12 +31,7 @@ scp "$ARCHIVE_FILE" "$MAIN_SERVER:${REMOTE_WORK_DIR}/"
 ssh "$MAIN_SERVER" bash << EOF
   set -e
   cd ${REMOTE_WORK_DIR}
-
   gunzip -c $(basename "$ARCHIVE_FILE") | docker load
-
-  docker compose up -d --no-deps --no-build parser
-
-  rm -f $(basename "$ARCHIVE_FILE")
 EOF
 
 rm -f "$TAR_FILE" "$ARCHIVE_FILE"
