@@ -16,7 +16,9 @@ export default function CreditsPurchase() {
    const mutation = useMutation({
   mutationFn: PurchaseCredits,
   onSuccess: () => {},
-  onError: () => {},
+  onError: (error) => {
+    console.error('Failed to purchase credits', error)
+  },
 });
   return (
     <Card>

@@ -13,7 +13,8 @@ export default function RunBtn({ workflowId }: { workflowId: string }) {
     onSuccess: () => {
       toast.success("Workflow started", { id: workflowId });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to run workflow', error)
       toast.error("Something went wrong", { id: workflowId });
     },
   });

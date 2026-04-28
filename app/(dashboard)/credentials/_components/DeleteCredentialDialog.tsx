@@ -28,8 +28,9 @@ export default function DeleteCredentialDialog({name}: {name: string}) {
       toast.dismiss()
       toast.success('Credential deleted successfully')
     },
-    onError: () => {
+    onError: (error) => {
       toast.dismiss()
+      console.error('Failed to delete Credential', error)
       toast.error('Failed to delete Credential')
     }
   })

@@ -33,8 +33,9 @@ export default function DuplicateWorkflowDialog({workflowId}: {workflowId?: stri
       toast.success('Workflow duplicate successfully')
       setOpen(prev=>!prev)
     },
-    onError: () => {
+    onError: (error) => {
       toast.dismiss()
+      console.error('Failed to duplicate workflow', error)
       toast.error('Failed to duplicate workflow')
     }
   })

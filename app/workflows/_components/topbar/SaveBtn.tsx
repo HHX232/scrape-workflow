@@ -16,9 +16,10 @@ export default function SaveBtn({workflowId}: {workflowId: string}) {
          toast.dismiss()
          toast.success('flow save success')
       },
-      onError:()=>{
+      onError:(error)=>{
          toast.dismiss()
-         toast.error('flow save success')
+         console.error('Failed to save flow', error)
+         toast.error('Failed to save flow')
       },
       
    })

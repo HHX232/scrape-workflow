@@ -9,7 +9,8 @@ export function InvoiceBtn({id}: {id: string}) {
   const mutation = useMutation({
     mutationFn: DownloadInvoice,
     onSuccess: (data) => (window.location.href = data as string),
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to download invoice', error)
       toast.error('Something went wrong')
     }
   })

@@ -26,7 +26,8 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
     onSuccess: () => {
       toast.success('Workflow schedule updated successfully', {id: 'cron'})
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to update workflow schedule', error)
       toast.error('Failed to update workflow schedule', {id: 'cron'})
     }
   })
@@ -35,7 +36,8 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
     onSuccess: () => {
       toast.success('Workflow schedule removed successfully', {id: 'cron'})
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to remove workflow schedule', error)
       toast.error('Failed to remove workflow schedule', {id: 'cron'})
     }
   })

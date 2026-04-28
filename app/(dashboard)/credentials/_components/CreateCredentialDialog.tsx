@@ -30,8 +30,9 @@ export default function CreateCredentialDialog({triggerText}: {triggerText?: str
       form.reset()
       setOpen(false)
     },
-    onError:()=>{
+    onError:(error)=>{
       toast.dismiss()
+      console.error('Failed to create Credential', error)
       toast.error('Failed to create Credential')
     }
   })

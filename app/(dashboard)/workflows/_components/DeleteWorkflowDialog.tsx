@@ -18,8 +18,9 @@ const deleteMutation = useMutation({
       toast.dismiss()
       toast.success('Workflow deleted successfully')
    },
-   onError: ()=>{
+   onError: (error)=>{
       toast.dismiss()
+      console.error('Failed to delete workflow', error)
       toast.error('Failed to delete workflow')
    }
 })
