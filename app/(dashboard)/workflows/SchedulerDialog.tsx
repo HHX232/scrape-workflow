@@ -1,7 +1,5 @@
 'use client'
 
-import { removeWorkflowSchedule } from '@/actions/workflows/removeWorkflowSchedule'
-import { UpdateWorkflowCron } from '@/actions/workflows/UpdateWorkflowCron'
 import CustomDialogHeader from '@/components/CustomDialogHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
@@ -21,8 +19,19 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
   const [cron, setCron] = useState(props.cron)
   const [validCron, setValidCron] = useState(false)
   const [readableCron, setReadableCron] = useState('')
+
   const mutation = useMutation({
-    mutationFn: UpdateWorkflowCron,
+    mutationFn: async ({ id, cron }: { id: string; cron: string }) => {
+      const res = await fetch(`/api/workflows/${id}/cron`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cron }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update schedule')
+      }
+    },
     onSuccess: () => {
       toast.success('Workflow schedule updated successfully', {id: 'cron'})
     },
@@ -31,8 +40,15 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
       toast.error('Failed to update workflow schedule', {id: 'cron'})
     }
   })
+
   const removeScheduleMutation = useMutation({
-    mutationFn: removeWorkflowSchedule,
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/workflows/${id}/cron`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to remove schedule')
+      }
+    },
     onSuccess: () => {
       toast.success('Workflow schedule removed successfully', {id: 'cron'})
     },
@@ -50,7 +66,6 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
       setReadableCron(humanCronStr)
     } catch (e) {
       setValidCron(false)
-
       console.error(e)
     }
   }, [cron])
@@ -80,27 +95,33 @@ export default function SchedulerDialog(props: {workflowId: string; cron: string
         </Button>
       </DialogTrigger>
       <DialogContent className='px-0'>
-        <CustomDialogHeader title='Schedule workflow execution' Icon={CalendarIcon}></CustomDialogHeader>
+        <CustomDialogHeader title='Schedule workflow execution' Icon={CalendarIcon} />
         <div className='p-6 space-y-4'>
-          <p className='text-muted-foreground'> Specify a cron expressionn to schedule periodic workflow execution</p>
+          <p className='text-muted-foreground'>Specify a cron expression to schedule periodic workflow execution</p>
           <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder='E.g. * * * * *' />
-
           <div
             className={cn(
               'bg-accent rounded-md p-4 border text-sm border-destructive text-destructive',
-              workflowHasValidCron && 'border-primary text-primary'
+              validCron && 'border-primary text-primary'
             )}
           >
-            {workflowHasValidCron ? readableCron : 'Not a valid cron expression'}
+            {validCron ? readableCron : 'Not a valid cron expression'}
           </div>
           {workflowHasValidCron && (
             <DialogClose asChild>
-              <div className=''>
-                <Button onClick={()=>{
-                  toast.loading("Removing schedule...", {id:"cron"})
-                  removeScheduleMutation.mutate(props.workflowId)
-                }} disabled={mutation.isPending || removeScheduleMutation.isPending} variant={'outline'} className='w-full text-destructive border-destructive hover:text-destructive'>Remove current Schedule</Button>
-                <Separator className='my-4'/>
+              <div>
+                <Button
+                  onClick={() => {
+                    toast.loading('Removing schedule...', {id: 'cron'})
+                    removeScheduleMutation.mutate(props.workflowId)
+                  }}
+                  disabled={mutation.isPending || removeScheduleMutation.isPending}
+                  variant={'outline'}
+                  className='w-full text-destructive border-destructive hover:text-destructive'
+                >
+                  Remove current Schedule
+                </Button>
+                <Separator className='my-4' />
               </div>
             </DialogClose>
           )}

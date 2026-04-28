@@ -1,6 +1,5 @@
 'use client'
 
-import { DuplicateWorkflow } from '@/actions/workflows/DuplicateWorkflow'
 import CustomDialogHeader from '@/components/CustomDialogHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -21,17 +20,25 @@ export default function DuplicateWorkflowDialog({workflowId}: {workflowId?: stri
 
   const form = useForm<duplicateWorkflowSchemaType>({
     resolver: zodResolver(duplicateWorkflowSchema),
-    defaultValues: {
-      workflowId
-    }
+    defaultValues: { workflowId }
   })
 
   const {mutate, isPending} = useMutation({
-    mutationFn: DuplicateWorkflow,
+    mutationFn: async (values: duplicateWorkflowSchemaType) => {
+      const res = await fetch('/api/workflows/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to duplicate workflow')
+      }
+    },
     onSuccess: () => {
       toast.dismiss()
-      toast.success('Workflow duplicate successfully')
-      setOpen(prev=>!prev)
+      toast.success('Workflow duplicated successfully')
+      setOpen(prev => !prev)
     },
     onError: (error) => {
       toast.dismiss()
@@ -40,24 +47,19 @@ export default function DuplicateWorkflowDialog({workflowId}: {workflowId?: stri
     }
   })
 
-  const onSubmit = useCallback(
-    (values: duplicateWorkflowSchemaType) => {
-      toast.loading('Duplicate workflow...')
-      mutate(values)
-    },
-    [mutate]
-  )
+  const onSubmit = useCallback((values: duplicateWorkflowSchemaType) => {
+    toast.loading('Duplicating workflow...')
+    mutate(values)
+  }, [mutate])
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(newOpen) => {
-        form.reset()
-        setOpen(newOpen)
-      }}
-    >
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      form.reset()
+      setOpen(newOpen)
+    }}>
       <DialogTrigger asChild>
         <Button className={cn('ml-2 transition-opacity duration-200 opacity-0 group-hover/card:opacity-100')} variant={'ghost'} size={'icon'}>
-        <CopyIcon className='w-4 h-4 text-muted-foreground cursor-pointer'/>
+          <CopyIcon className='w-4 h-4 text-muted-foreground cursor-pointer' />
         </Button>
       </DialogTrigger>
       <DialogContent className='px-0'>
@@ -68,44 +70,39 @@ export default function DuplicateWorkflowDialog({workflowId}: {workflowId?: stri
               <FormField
                 control={form.control}
                 name='name'
-                render={({field}) => {
-                  return (
-                    <FormItem>
-                      <FormLabel className='flex gap-1 items-center'>
-                        Name
-                        <p className='text-xs text-primary'>(Required)</p>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormDescription>Choose a description and unique name</FormDescription>
-                      <FormMessage></FormMessage>
-                    </FormItem>
-                  )
-                }}
+                render={({field}) => (
+                  <FormItem>
+                    <FormLabel className='flex gap-1 items-center'>
+                      Name
+                      <p className='text-xs text-primary'>(Required)</p>
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>Choose a descriptive and unique name</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-
               <FormField
                 control={form.control}
                 name='description'
-                render={({field}) => {
-                  return (
-                    <FormItem>
-                      <FormLabel className='flex gap-1 items-center'>
-                        Description
-                        <p className='text-xs text-muted-foreground'>(Optional)</p>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea className='resize-none' {...field} />
-                      </FormControl>
-                      <FormDescription>Provide a brief description of what your workflow does</FormDescription>
-                      <FormMessage></FormMessage>
-                    </FormItem>
-                  )
-                }}
+                render={({field}) => (
+                  <FormItem>
+                    <FormLabel className='flex gap-1 items-center'>
+                      Description
+                      <p className='text-xs text-muted-foreground'>(Optional)</p>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea className='resize-none' {...field} />
+                    </FormControl>
+                    <FormDescription>Provide a brief description of what your workflow does</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
               <Button disabled={isPending} className='w-full' type='submit'>
-                {isPending ? <Loader2Icon className='animate-spin' /> : 'Create workflow'}
+                {isPending ? <Loader2Icon className='animate-spin' /> : 'Duplicate workflow'}
               </Button>
             </form>
           </Form>

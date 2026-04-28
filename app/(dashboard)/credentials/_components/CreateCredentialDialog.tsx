@@ -1,6 +1,5 @@
 'use client'
 
-import { CreateCredential } from '@/actions/credentials/CreateCredential'
 import CustomDialogHeader from '@/components/CustomDialogHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -23,28 +22,40 @@ export default function CreateCredentialDialog({triggerText}: {triggerText?: str
   })
 
   const {mutate, isPending} = useMutation({
-    mutationFn: CreateCredential,
-    onSuccess: ()=>{
+    mutationFn: async (values: createCredentialSchemaType) => {
+      const res = await fetch('/api/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to create credential')
+      }
+    },
+    onSuccess: () => {
       toast.dismiss()
       toast.success('Credential created successfully')
       form.reset()
       setOpen(false)
     },
-    onError:(error)=>{
+    onError: (error) => {
       toast.dismiss()
       console.error('Failed to create Credential', error)
       toast.error('Failed to create Credential')
     }
   })
 
-  const onSubmit = useCallback((values: createCredentialSchemaType)=>{
+  const onSubmit = useCallback((values: createCredentialSchemaType) => {
     toast.loading('Creating Credential...')
     mutate(values)
-  },[mutate])
+  }, [mutate])
+
   return (
-    <Dialog open={open} onOpenChange={(newOpen)=>{
+    <Dialog open={open} onOpenChange={(newOpen) => {
       form.reset()
-      setOpen(newOpen)}}>
+      setOpen(newOpen)
+    }}>
       <DialogTrigger asChild>
         <Button>{triggerText ?? 'Create'}</Button>
       </DialogTrigger>
@@ -56,46 +67,44 @@ export default function CreateCredentialDialog({triggerText}: {triggerText?: str
               <FormField
                 control={form.control}
                 name='name'
-                render={({field}) => {
-                  return (
-                    <FormItem>
-                      <FormLabel className='flex gap-1 items-center'>
-                        Name
-                        <p className='text-xs text-primary'>(Required)</p>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormDescription>enter a uniquer an descriptive name for the credential</FormDescription>
-                      <FormMessage></FormMessage>
-                    </FormItem>
-                  )
-                }}
+                render={({field}) => (
+                  <FormItem>
+                    <FormLabel className='flex gap-1 items-center'>
+                      Name
+                      <p className='text-xs text-primary'>(Required)</p>
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormDescription>enter a unique and descriptive name for the credential</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-
               <FormField
                 control={form.control}
                 name='value'
-                render={({field}) => {
-                  return (
-                    <FormItem>
-                      <FormLabel className='flex gap-1 items-center'>
-                        Value
-                        <p className='text-xs text-primary'>(Required)</p>
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea className='resize-none' {...field} />
-                      </FormControl>
-                      <FormDescription>Enter the value associated with this credential
-                        <br/>
-                        This value will be encrypted and stored securely
-                      </FormDescription>
-                      <FormMessage></FormMessage>
-                    </FormItem>
-                  )
-                }}
+                render={({field}) => (
+                  <FormItem>
+                    <FormLabel className='flex gap-1 items-center'>
+                      Value
+                      <p className='text-xs text-primary'>(Required)</p>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea className='resize-none' {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Enter the value associated with this credential
+                      <br />
+                      This value will be encrypted and stored securely
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <Button disabled={isPending} className='w-full' type='submit'>{isPending ? <Loader2Icon className='animate-spin'/> : 'Create workflow'}</Button>
+              <Button disabled={isPending} className='w-full' type='submit'>
+                {isPending ? <Loader2Icon className='animate-spin' /> : 'Create credential'}
+              </Button>
             </form>
           </Form>
         </div>

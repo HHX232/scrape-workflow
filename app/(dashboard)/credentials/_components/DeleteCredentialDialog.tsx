@@ -1,6 +1,5 @@
 'use client'
 
-import {DeleteCredential} from '@/actions/credentials/DeleteCredential'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +21,15 @@ import {toast} from 'sonner'
 export default function DeleteCredentialDialog({name}: {name: string}) {
   const [confirmText, setConfirmText] = useState('')
   const [open, setOpen] = useState(false)
+
   const deleteMutation = useMutation({
-    mutationFn: DeleteCredential,
+    mutationFn: async (credentialName: string) => {
+      const res = await fetch(`/api/credentials/${encodeURIComponent(credentialName)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete credential')
+      }
+    },
     onSuccess: () => {
       toast.dismiss()
       toast.success('Credential deleted successfully')
@@ -34,6 +40,7 @@ export default function DeleteCredentialDialog({name}: {name: string}) {
       toast.error('Failed to delete Credential')
     }
   })
+
   return (
     <AlertDialog
       open={open}
@@ -66,7 +73,7 @@ export default function DeleteCredentialDialog({name}: {name: string}) {
             disabled={confirmText !== name || deleteMutation.isPending}
             onClick={(e) => {
               e.stopPropagation()
-              toast.loading('Deleting credential...'), {id: name}
+              toast.loading('Deleting credential...', {id: name})
               deleteMutation.mutate(name)
             }}
           >
