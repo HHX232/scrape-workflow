@@ -10,12 +10,16 @@ export async function deleteWorkflow(id:string) {
       throw new Error('Unauthorized')
    }
 
-   await prisma.workflow.delete({
-      where: {
-         id,
-         userId
-      }
-   })
+   try {
+      await prisma.workflow.delete({
+         where: {
+            id,
+            userId
+         }
+      })
+   } catch (error) {
+      throw new Error('Failed to delete workflow')
+   }
 
    revalidatePath('/workflows')
 }

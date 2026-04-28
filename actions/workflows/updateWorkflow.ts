@@ -6,37 +6,41 @@ import { WorkflowStatus } from "@/types/workflow";
 import { revalidatePath } from "next/cache";
 
 export async function UpdateWorkflow({
-   id, definition, callback
+   id, definition
 }: {
    id: string,
    definition: string,
-   callback?: () => void
 }){
    const {userId} = auth()
 
    if(!userId){
       throw new Error('Unauthorized')
    }
-   const workflow = await prisma.workflow.findUnique({
-      where: {
-         id
-      }
-   })
+
+   let workflow
+   try {
+      workflow = await prisma.workflow.findUnique({
+         where: { id }
+      })
+   } catch {
+      throw new Error('Failed to fetch workflow')
+   }
+
    if(!workflow){
       throw new Error('Workflow not found')
    }
    if(workflow.status !== WorkflowStatus.DRAFT){
       throw new Error('Workflow is not in draft state')
    }
-   await prisma.workflow.update({
-   data: {
-      definition: definition 
-   },
-      where: {
-         id,
-         userId
-      }
-   })
+
+   try {
+      await prisma.workflow.update({
+         data: { definition },
+         where: { id, userId }
+      })
+   } catch {
+      throw new Error('Failed to update workflow')
+   }
 
    revalidatePath('/workflows')
 }
