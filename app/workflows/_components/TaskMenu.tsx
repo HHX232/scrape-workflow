@@ -128,6 +128,7 @@ export default function TaskMenu() {
             <TaskMenuBtn taskType={TaskType.GET_ALL_LINKS_IN_BOX}></TaskMenuBtn>
             <TaskMenuBtn taskType={TaskType.CLICK_WHILE_VISIBLE}></TaskMenuBtn>
             <TaskMenuBtn taskType={TaskType.EXTRACT_TABLE_AS_JSON}></TaskMenuBtn>
+            <TaskMenuBtn taskType={TaskType.GET_ALL_FOR_PRICE}></TaskMenuBtn>
           </AccordionContent>
         </AccordionItem>
 
