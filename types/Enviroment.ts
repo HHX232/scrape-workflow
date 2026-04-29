@@ -24,5 +24,6 @@ export type ExecutionEnviroment<T extends WorkflowTask> = {
   setPage(page:Page): void
  __forEachIndex?: number
   __accumulators?: Record<string, any>
+  __dynamicInputCount?: number
   log: LogCollector;
 }

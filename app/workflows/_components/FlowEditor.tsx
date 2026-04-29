@@ -19,7 +19,7 @@ import type {DragEvent} from 'react'
 import {createFlowNode} from '@/lib/workflow/createFlowNode'
 import {TaskRegistry} from '@/lib/workflow/task/registry'
 import {AppNode} from '@/types/appNode'
-import {TaskType} from '@/types/TaskType'
+import {TaskParamType, TaskType} from '@/types/TaskType'
 import dagre from '@dagrejs/dagre'
 import '@xyflow/react/dist/style.css'
 import {useCallback, useEffect} from 'react'
@@ -151,8 +151,11 @@ export default function FlowEditor({workflow}: {workflow: Workflow}) {
 
       const input = targetTask?.inputs?.find((input) => input.name.trim() === targetHandleName)
 
-      if (input?.type !== output?.type) {
-        console.log('Type mismatch:', input?.type, output?.type)
+      // Для задач с динамическими входами (ForEach, MergeArrays) все слоты имеют тип STRING
+      const inputType = input?.type ?? (targetTask?.dynamicInputs ? TaskParamType.STRING : undefined)
+
+      if (inputType !== output?.type) {
+        console.log('Type mismatch:', inputType, output?.type)
         return false
       }
 

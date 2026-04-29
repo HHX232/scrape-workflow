@@ -158,7 +158,7 @@ function getLoopPhaseIndices(
  * Returns true if this node is downstream of any FOR_EACH node that
  * appears earlier in the phases array (i.e. it's a loop body).
  */
-function isInsideAnyLoop(nodeId: string, phases: ExecutionPhase[], edges: Edge[], currentIndex: number): boolean {
+function isInsideAnyLoop(_nodeId: string, phases: ExecutionPhase[], edges: Edge[], currentIndex: number): boolean {
   for (let idx = 0; idx < currentIndex; idx++) {
     const candidate = JSON.parse(phases[idx].node) as AppNode
     if (candidate.data.type !== TaskType.FOR_EACH) continue
@@ -349,7 +349,7 @@ async function finalizePhase(
 }
 
 async function executePhase(
-  phase: ExecutionPhase,
+  _phase: ExecutionPhase,
   node: AppNode,
   enviroment: Enviroment,
   logCollector: LogCollector
@@ -365,7 +365,8 @@ async function executePhase(
 
 function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: Edge[]) {
   environment.phases[node.id] = {inputs: {}, outputs: {}}
-  const inputs = TaskRegistry[node.data.type].inputs
+  const task = TaskRegistry[node.data.type]
+  const inputs = task.inputs
 
   for (const input of inputs) {
     if (input.type === TaskParamType.BROWSER_INSTANCE) continue
@@ -387,6 +388,30 @@ function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: 
 
     const outputValue = environment.phases[connectEdge.source]?.outputs[connectEdge?.sourceHandle || '']
     environment.phases[node.id].inputs[input.name] = outputValue
+  }
+
+  // Динамические входы (например, MergeArrays)
+  if (task.dynamicInputs) {
+    const count: number = node.data.dynamicInputCount ?? 1
+    ;(environment as any).__dynamicInputCount = count
+    const prefix = (task as any).dynamicInputPrefix ?? 'Array'
+
+    for (let i = 1; i <= count; i++) {
+      const name = i === 1 ? prefix : `${prefix} ${i}`
+      const staticValue = node.data.inputs?.[name]
+      if (staticValue) {
+        environment.phases[node.id].inputs[name] = staticValue
+        continue
+      }
+      const connectEdge = edges.find(
+        (edge) =>
+          edge.target === node.id &&
+          (edge.targetHandle === `${node.id}-input-${name}` || edge.targetHandle === name)
+      )
+      if (!connectEdge) continue
+      const outputValue = environment.phases[connectEdge.source]?.outputs[connectEdge?.sourceHandle || '']
+      if (outputValue !== undefined) environment.phases[node.id].inputs[name] = outputValue
+    }
   }
 }
 
@@ -418,6 +443,9 @@ function createExecutionEnviroment(
     },
     set __accumulators(v) {
       ;(enviroment as any).__accumulators = v
+    },
+    get __dynamicInputCount() {
+      return (enviroment as any).__dynamicInputCount
     }
   }
 }

@@ -15,6 +15,9 @@ export type WorkflowTask = {
   inputs: TaskParam[]
   outputs: TaskParam[]
   credits: number
+  dynamicInputs?: boolean
+  dynamicInputPrefix?: string
+  dynamicOutputPrefix?: string
 }
 
 export type WorkflowExecutionPlanPhase = {
