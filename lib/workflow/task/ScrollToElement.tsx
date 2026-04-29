@@ -19,9 +19,19 @@ export const ScrollToElementTask = {
     {
       name: 'Selector',
       type: TaskParamType.STRING,
-      required: true,
+      required: false,
       hideHandle: false
+    },
+    {
+      name: 'Button Text',
+      type: TaskParamType.STRING,
+      required: false,
+      hideHandle: false,
+      helpText: 'Поиск элемента по тексту (если Selector не задан или не найден)'
     }
   ] as const,
-  outputs: [{name: 'Web page', type: TaskParamType.BROWSER_INSTANCE}] as const
+  outputs: [
+    { name: 'Web page', type: TaskParamType.BROWSER_INSTANCE },
+    { name: 'Found Selector', type: TaskParamType.STRING }
+  ] as const
 } satisfies WorkflowTask

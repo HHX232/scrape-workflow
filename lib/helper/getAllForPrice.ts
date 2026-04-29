@@ -57,8 +57,33 @@ const UNIT_MAP: Record<string, string> = {
 };
 
 function parseUnit(raw: string): string {
-  const key = raw.trim().toLowerCase().replace(/[.\s]/g, "");
-  return UNIT_MAP[key] ?? raw.trim();
+  const normalized = raw.trim().toLowerCase()
+
+  // Прямое совпадение (например "шт", "кг")
+  const directKey = normalized.replace(/[.\s]/g, "")
+  if (UNIT_MAP[directKey]) return UNIT_MAP[directKey]
+
+  // Ищем известную единицу внутри строки ("от 1 до 40 шт" → "шт")
+  let foundKey: string | null = null
+  // Сортируем по длине убыванию, чтобы "штука" раньше "шт"
+  for (const key of Object.keys(UNIT_MAP).sort((a, b) => b.length - a.length)) {
+    if (new RegExp(`(?:^|\\s)${key}(?:\\s|$|\\.)`, 'i').test(normalized)) {
+      foundKey = key
+      break
+    }
+  }
+
+  if (!foundKey) return raw.trim()
+
+  // Извлекаем минимальное количество: "от 1 до 40" → 1, "от 1" → 1, "1" → 1
+  const fromMatch = normalized.match(/от\s+(\d+)/)
+  const plainMatch = normalized.match(/(\d+)/)
+  const hasFrom = !!fromMatch
+  const minQty = fromMatch ? fromMatch[1] : plainMatch ? plainMatch[1] : null
+
+  if (minQty && hasFrom) return `от ${minQty} ${foundKey}`
+  if (minQty) return `${minQty} ${foundKey}`
+  return UNIT_MAP[foundKey]
 }
 
 function parsePrice(raw: string): number {
@@ -79,11 +104,6 @@ function parseCurrency(raw: string): string {
 }
 
 export type PriceResult = {
-  price: {
-    value: number;
-    currency: string;
-    unit: string;
-  };
   value: number;
   currency: string;
   unit: string;
@@ -94,14 +114,9 @@ export function getAllForPrice(
   priceStr: string,
   currencyStr: string
 ): PriceResult {
-  const value = parsePrice(priceStr);
-  const currency = parseCurrency(currencyStr);
-  const unit = parseUnit(unitStr);
-
   return {
-    price: { value, currency, unit },
-    value,
-    currency,
-    unit,
+    value: parsePrice(priceStr),
+    currency: parseCurrency(currencyStr),
+    unit: parseUnit(unitStr),
   };
 }

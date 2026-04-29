@@ -16,15 +16,24 @@ export async function DeliverViaWebhookExecutor(
       return false
     }
 
+    // Если body уже валидный JSON-строка — отправляем как есть, иначе оборачиваем
+    let bodyToSend: string
+    try {
+      JSON.parse(body)
+      bodyToSend = body
+    } catch {
+      bodyToSend = JSON.stringify(body)
+    }
+
     const response = await fetch(targetUrl, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: bodyToSend,
       headers: {
         'Content-Type': 'application/json'
       }
     })
     const statusCode = response.status
-    if (statusCode !== 200) {
+    if (statusCode < 200 || statusCode >= 300) {
       enviroment.log.error(`Error fetch body with status code: ${statusCode}`)
       return false
     }
