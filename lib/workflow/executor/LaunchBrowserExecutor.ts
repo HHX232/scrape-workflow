@@ -27,10 +27,14 @@ export async function LaunchBrowserExecutor(
     }
     
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: [
         // '--proxy-server=http://brd.superproxy.io:33335',  // ЗАКОММЕНТИРОВАН ПРОКСИ
         '--ignore-certificate-errors',
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
       ]
     })
     
