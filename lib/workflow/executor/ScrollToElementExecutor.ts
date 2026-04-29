@@ -59,8 +59,8 @@ export async function ScrollToElementExecutor(
       )
 
       if (!found) {
-        enviroment.log.error(`Элемент с текстом "${buttonText}" не найден`)
-        return false
+        enviroment.log.info(`Элемент с текстом "${buttonText}" не найден — пропускаем`)
+        return true
       }
 
       resolved = FOUND_SELECTOR
@@ -70,7 +70,7 @@ export async function ScrollToElementExecutor(
     enviroment.setOutput('Found Selector', resolved)
     return true
   } catch (error: any) {
-    enviroment.log.error(`ScrollToElement error: ${error?.message ?? error}`)
-    return false
+    enviroment.log.info(`ScrollToElement: элемент не найден, продолжаем (${error?.message ?? error})`)
+    return true
   }
 }

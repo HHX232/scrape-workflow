@@ -20,7 +20,7 @@ export async function ClickElementExecutor(
     await enviroment.getPage()!.click(selector, { delay: 100 })
     return true
   } catch (error: any) {
-    enviroment.log.error(`Error clicking element: ${error?.message ?? error}`)
-    return false
+    enviroment.log.info(`ClickElement: элемент не найден, продолжаем (${error?.message ?? error})`)
+    return true
   }
 }
