@@ -55,10 +55,8 @@ export async function GetAllLinksInBoxExecutor(
 
     const links: string[] = []
 
-    container.find('a').each((_: number, el: any) => {
-      const href = $(el).attr('href')
+    const processHref = (href: string | undefined) => {
       if (!href || href === '#' || href.startsWith('javascript:')) return
-
       if (baseUrl && !href.startsWith('http://') && !href.startsWith('https://')) {
         try {
           links.push(new URL(href, baseUrl).toString())
@@ -68,6 +66,22 @@ export async function GetAllLinksInBoxExecutor(
       } else {
         links.push(href)
       }
+    }
+
+    // Standard <a href> links
+    container.find('a').each((_: number, el: any) => {
+      processHref($(el).attr('href'))
+    })
+
+    // Non-anchor elements with href (e.g. fancybox <div href="...">)
+    container.find('[href]').not('a').each((_: number, el: any) => {
+      processHref($(el).attr('href'))
+    })
+
+    // Also check if the container elements themselves have href (when selector targets the items directly)
+    container.each((_: number, el: any) => {
+      const tag = (el as any).tagName?.toLowerCase()
+      if (tag !== 'a') processHref($(el).attr('href'))
     })
 
     const unique = links.reduce((acc, link) => {

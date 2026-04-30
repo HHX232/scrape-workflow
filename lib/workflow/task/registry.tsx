@@ -31,6 +31,7 @@ import { ClickWhileVisibleTask } from "./ClickWhileVisibleTask"
 import { ExtractTableAsJsonTask } from "./ExtractTableAsJsonTask";
 import { GetAllForPriceTask } from "./GetAllForPrice";
 import { MergeArraysTask } from "./MergeArraysTask";
+import { CoalesceTask } from "./CoalesceTask";
 
 type Registry = {
    [K in TaskType]: WorkflowTask & {type: K}
@@ -68,5 +69,6 @@ export const TaskRegistry: Registry = {
   [TaskType.EXTRACT_TABLE_AS_JSON]: ExtractTableAsJsonTask,
   [TaskType.GET_ALL_FOR_PRICE]: GetAllForPriceTask,
   [TaskType.MERGE_ARRAYS]: MergeArraysTask,
+  [TaskType.COALESCE]: CoalesceTask,
 }
    

@@ -130,6 +130,7 @@ export default function TaskMenu() {
             <TaskMenuBtn taskType={TaskType.EXTRACT_TABLE_AS_JSON}></TaskMenuBtn>
             <TaskMenuBtn taskType={TaskType.GET_ALL_FOR_PRICE}></TaskMenuBtn>
             <TaskMenuBtn taskType={TaskType.MERGE_ARRAYS}></TaskMenuBtn>
+            <TaskMenuBtn taskType={TaskType.COALESCE}></TaskMenuBtn>
           </AccordionContent>
         </AccordionItem>
 

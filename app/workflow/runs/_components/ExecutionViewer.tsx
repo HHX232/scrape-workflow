@@ -1,4 +1,5 @@
 'use client'
+import { cancelWorkflowExecution } from '@/actions/workflows/cancelWorkflowExecution'
 import { GetWorkflowExecutionWithPhases } from '@/actions/workflows/GetWorkflowExecutionWithPhases'
 import { GetWorkflowPhaseDetails } from '@/actions/workflows/GetWorkflowPhaseDetails'
 import { Badge } from '@/components/ui/badge'
@@ -15,10 +16,11 @@ import { LogLevel } from '@/types/log'
 import { ExecutionStatus, WorkflowExecutionStatus } from '@/types/workflow'
 
 import ReactCountUpWrapper from '@/components/ReactCountUpWrapper'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarIcon, CircleDashedIcon, ClockIcon, CoinsIcon, Loader2Icon, LucideIcon, WorkflowIcon } from 'lucide-react'
+import { CalendarIcon, CircleDashedIcon, ClockIcon, CoinsIcon, Loader2Icon, LucideIcon, SquareIcon, WorkflowIcon } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { default as PhasesStatusBadge, default as PhaseStatusBadge } from './PhasesStatusBadge'
 
 type ExecutionData = Awaited<ReturnType<typeof GetWorkflowExecutionWithPhases>>
@@ -38,6 +40,12 @@ export default function ExecutionViewer({initialData}: {initialData: ExecutionDa
   })
 
   const isRunning = query.data?.status === WorkflowExecutionStatus.RUNNING
+
+  const cancelMutation = useMutation({
+    mutationFn: cancelWorkflowExecution,
+    onSuccess: () => toast.success('Execution stopped'),
+    onError: () => toast.error('Failed to stop execution')
+  })
   useEffect(()=>{
 const phases = query.data?.phases
 if(isRunning && phases){
@@ -113,8 +121,18 @@ if(!isRunning && phases){
       <div className='flex w-full h-full'>
         {isRunning && (
           <div className='flex flex-col items-center gap-2 justify-center w-full h-full'>
-            <p className='font-bold '>Run is in progress, please wait</p>
+            <p className='font-bold'>Run is in progress, please wait</p>
             <Loader2Icon size={20} className='animate-spin' />
+            <Button
+              variant='destructive'
+              size='sm'
+              className='mt-2 gap-2'
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate(query.data!.id)}
+            >
+              {cancelMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SquareIcon size={14} />}
+              Stop execution
+            </Button>
           </div>
         )}
         {!isRunning && !selectedPhases && (

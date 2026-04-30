@@ -9,6 +9,7 @@ const indicatorColors: Record<WorkflowExecutionStatus, string> = {
     FAILED: "bg-red-400",
     COMPLETED: "bg-emerald-600",
     CREATED: "bg-slate-400",
+    CANCELLED: "bg-orange-400",
 };
 
 export default function ExecutionStatusIndicator({
@@ -27,6 +28,7 @@ const labelColors: Record<WorkflowExecutionStatus, string> = {
     FAILED: "text-red-400",
     COMPLETED: "text-emerald-600",
     CREATED: "text-slate-400",
+    CANCELLED: "text-orange-400",
 };
 
 export function ExecutionStatusLabel({status}: {status: WorkflowExecutionStatus}) {

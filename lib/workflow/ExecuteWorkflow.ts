@@ -27,12 +27,21 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
 
   let creditsConsumed = 0
   let executionFailed = false
+  let executionCancelled = false
   const edges = JSON.parse(execution.definition).edges as Edge[]
 
   const phases = execution.phases
 
   let i = 0
   while (i < phases.length) {
+    const currentStatus = await prisma.workflowExecution.findUnique({
+      where: {id: executionId},
+      select: {status: true}
+    })
+    if (currentStatus?.status === WorkflowExecutionStatus.CANCELLED) {
+      executionCancelled = true
+      break
+    }
     const phase = phases[i]
     const node = JSON.parse(phase.node) as AppNode
 
@@ -110,7 +119,7 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
     }
   }
 
-  await finalizeWorkflowExecution(executionId, execution.workflowId, executionFailed, creditsConsumed)
+  await finalizeWorkflowExecution(executionId, execution.workflowId, executionFailed, creditsConsumed, executionCancelled)
   await cleanupEnviroment(enviroment)
   revalidatePath(`/workflow/runs/`)
 }
@@ -272,9 +281,12 @@ async function finalizeWorkflowExecution(
   executionId: string,
   workflowId: string,
   executionFailed: boolean,
-  creditsConsumed: number
+  creditsConsumed: number,
+  executionCancelled = false
 ) {
-  const finalStatus = executionFailed ? WorkflowExecutionStatus.FAILED : WorkflowExecutionStatus.COMPLETED
+  const finalStatus = executionCancelled
+    ? WorkflowExecutionStatus.CANCELLED
+    : executionFailed ? WorkflowExecutionStatus.FAILED : WorkflowExecutionStatus.COMPLETED
   await prisma.workflowExecution.update({
     where: {id: executionId},
     data: {status: finalStatus, completedAt: new Date(), creditsConsumed}

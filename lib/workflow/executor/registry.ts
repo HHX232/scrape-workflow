@@ -32,6 +32,7 @@ import { ClickWhileVisibleExecutor } from "./ClickWhileVisibleExecutor"
 import { ExtractTableAsJsonExecutor } from "./ExtractTableAsJsonExecutor";
 import { GetAllForPriceExecutor } from "./GetAllForPriceExecutor";
 import { MergeArraysExecutor } from "./MergeArraysExecutor";
+import { CoalesceExecutor } from "./CoalesceExecutor";
 
 type ExecutorFn<T extends WorkflowTask> = (enviroment:ExecutionEnviroment<T>) => Promise<boolean>
 
@@ -70,4 +71,5 @@ export const ExecutorRegistry:RegistryType = {
    EXTRACT_TABLE_AS_JSON:ExtractTableAsJsonExecutor,
    GET_ALL_FOR_PRICE:GetAllForPriceExecutor,
    MERGE_ARRAYS:MergeArraysExecutor,
+   COALESCE:CoalesceExecutor,
 }

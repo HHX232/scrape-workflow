@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(sqlite3 prisma/dev.db \"SELECT id, userId, name, description, status, creditsCost, definition FROM Workflow LIMIT 5;\")",
+      "Bash(node -e ' *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs ls *)"
     ]
   }
 }
