@@ -12,7 +12,7 @@ export async function MergeArraysExecutor(
     const merged: unknown[] = []
 
     for (let i = 1; i <= count; i++) {
-      const raw = enviroment.getInput(slotName('Array', i) as any)
+      const raw = enviroment.getInput(slotName('Array', i) as never)
       if (!raw) continue
       try {
         const parsed = JSON.parse(raw)

@@ -11,7 +11,7 @@ export async function ForEachExecutor(
     const index: number = loopEnv.__forEachIndex ?? 0
     const count: number = loopEnv.__dynamicInputCount ?? 1
 
-    const primaryRaw = enviroment.getInput('Items' as any)
+    const primaryRaw = enviroment.getInput('Items' as never)
     if (!primaryRaw) {
       enviroment.log.error('input -> Items is not defined')
       return false
@@ -37,7 +37,7 @@ export async function ForEachExecutor(
     enviroment.setOutput('Index' as any, String(index))
 
     for (let i = 2; i <= count; i++) {
-      const raw = enviroment.getInput(slotName('Items', i) as any)
+      const raw = enviroment.getInput(slotName('Items', i) as never)
       if (!raw) continue
       try {
         const arr = JSON.parse(raw)
