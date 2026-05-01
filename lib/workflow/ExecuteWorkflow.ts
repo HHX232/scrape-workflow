@@ -402,6 +402,21 @@ function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: 
     environment.phases[node.id].inputs[input.name] = outputValue
   }
 
+  // Extra dynamic inputs (e.g. exclusion selectors in GetAllLinksInBox)
+  if ((task as any).extraDynamicInputs) {
+    const excludeCount: number = node.data.excludeCount ?? 0
+    ;(environment as any).__excludeCount = excludeCount
+    const prefix: string = (task as any).extraDynamicInputs.prefix
+
+    for (let i = 1; i <= excludeCount; i++) {
+      const name = i === 1 ? prefix : `${prefix} ${i}`
+      const staticValue = node.data.inputs?.[name]
+      if (staticValue) {
+        environment.phases[node.id].inputs[name] = staticValue
+      }
+    }
+  }
+
   // Динамические входы (например, MergeArrays)
   if (task.dynamicInputs) {
     const count: number = node.data.dynamicInputCount ?? 1

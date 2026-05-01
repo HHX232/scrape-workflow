@@ -148,6 +148,7 @@ export default function TaskMenu() {
           <AccordionTrigger className='font-bold'>Timing controls</AccordionTrigger>
           <AccordionContent className='flex flex-col gap-1'>
             <TaskMenuBtn taskType={TaskType.WAIT_FOR_ELEMENT}></TaskMenuBtn>
+            <TaskMenuBtn taskType={TaskType.WAIT}></TaskMenuBtn>
           </AccordionContent>
         </AccordionItem>
 

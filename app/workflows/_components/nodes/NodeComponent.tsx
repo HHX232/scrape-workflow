@@ -49,6 +49,48 @@ function DynamicInputs({ nodeId, count, prefix }: { nodeId: string; count: numbe
   )
 }
 
+function ExtraDynamicInputs({
+  nodeId,
+  count,
+  prefix,
+  addLabel,
+}: {
+  nodeId: string
+  count: number
+  prefix: string
+  addLabel?: string
+}) {
+  const { updateNodeData, getNode } = useReactFlow()
+
+  const setCount = (next: number) => {
+    const node = getNode(nodeId)
+    if (!node) return
+    updateNodeData(nodeId, { ...node.data, excludeCount: next })
+  }
+
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => i + 1).map(i => (
+        <NodeInput
+          key={`${prefix} ${i}`}
+          input={{ name: i === 1 ? prefix : `${prefix} ${i}`, type: TaskParamType.STRING, required: false, hideHandle: true }}
+          nodeId={nodeId}
+        />
+      ))}
+      <div className='flex gap-1 p-2'>
+        <Button size='sm' variant='outline' className='flex-1 gap-1 text-xs' onClick={() => setCount(count + 1)}>
+          <PlusIcon size={12} /> {addLabel ?? 'Добавить'}
+        </Button>
+        {count > 0 && (
+          <Button size='sm' variant='outline' className='gap-1 text-xs text-destructive' onClick={() => setCount(count - 1)}>
+            <MinusIcon size={12} />
+          </Button>
+        )}
+      </div>
+    </>
+  )
+}
+
 function DynamicOutputs({ nodeId, count, prefix }: { nodeId: string; count: number; prefix: string }) {
   return (
     <>
@@ -76,7 +118,17 @@ const NodeComponent = memo((props: NodeProps) => {
         {task?.dynamicInputs ? (
           <DynamicInputs nodeId={props.id} count={count} prefix={task.dynamicInputPrefix ?? 'Array'} />
         ) : (
-          task?.inputs?.map(input => <NodeInput key={input.name} input={input} nodeId={props.id} />)
+          <>
+            {task?.inputs?.map(input => <NodeInput key={input.name} input={input} nodeId={props.id} />)}
+            {task?.extraDynamicInputs && (
+              <ExtraDynamicInputs
+                nodeId={props.id}
+                count={nodeData.excludeCount ?? 0}
+                prefix={task.extraDynamicInputs.prefix}
+                addLabel={task.extraDynamicInputs.addLabel}
+              />
+            )}
+          </>
         )}
       </NodeInputs>
       <NodeOutputs>

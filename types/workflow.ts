@@ -18,6 +18,7 @@ export type WorkflowTask = {
   dynamicInputs?: boolean
   dynamicInputPrefix?: string
   dynamicOutputPrefix?: string
+  extraDynamicInputs?: { prefix: string; addLabel?: string }
 }
 
 export type WorkflowExecutionPlanPhase = {

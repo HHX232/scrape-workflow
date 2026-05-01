@@ -53,39 +53,44 @@ export async function GetAllLinksInBoxExecutor(
       return true
     }
 
-    const links: string[] = []
-
-    const processHref = (href: string | undefined) => {
-      if (!href || href === '#' || href.startsWith('javascript:')) return
+    const resolveHref = (href: string | undefined): string | null => {
+      if (!href || href === '#' || href.startsWith('javascript:')) return null
       if (baseUrl && !href.startsWith('http://') && !href.startsWith('https://')) {
-        try {
-          links.push(new URL(href, baseUrl).toString())
-        } catch {
-          links.push(href)
-        }
-      } else {
-        links.push(href)
+        try { return new URL(href, baseUrl).toString() } catch { return href }
       }
+      return href
     }
 
-    // Standard <a href> links
-    container.find('a').each((_: number, el: any) => {
-      processHref($(el).attr('href'))
-    })
+    const collectFromContainer = (cont: ReturnType<typeof $>): string[] => {
+      const result: string[] = []
+      cont.find('a').each((_: number, el: any) => {
+        const r = resolveHref($(el).attr('href')); if (r) result.push(r)
+      })
+      cont.find('[href]').not('a').each((_: number, el: any) => {
+        const r = resolveHref($(el).attr('href')); if (r) result.push(r)
+      })
+      cont.each((_: number, el: any) => {
+        if ((el as any).tagName?.toLowerCase() !== 'a') {
+          const r = resolveHref($(el).attr('href')); if (r) result.push(r)
+        }
+      })
+      return result
+    }
 
-    // Non-anchor elements with href (e.g. fancybox <div href="...">)
-    container.find('[href]').not('a').each((_: number, el: any) => {
-      processHref($(el).attr('href'))
-    })
+    // Collect exclusion selectors
+    const excludeCount: number = (enviroment as any).__excludeCount ?? 0
+    const excludedHrefs = new Set<string>()
+    for (let i = 1; i <= excludeCount; i++) {
+      const name = i === 1 ? 'Exclude Selector' : `Exclude Selector ${i}`
+      const exclSel = enviroment.getInput(name as never)
+      if (!exclSel) continue
+      collectFromContainer(container.find(exclSel)).forEach(h => excludedHrefs.add(h))
+    }
 
-    // Also check if the container elements themselves have href (when selector targets the items directly)
-    container.each((_: number, el: any) => {
-      const tag = (el as any).tagName?.toLowerCase()
-      if (tag !== 'a') processHref($(el).attr('href'))
-    })
+    const allLinks = collectFromContainer(container)
 
-    const unique = links.reduce((acc, link) => {
-      if (!acc.includes(link)) acc.push(link)
+    const unique = allLinks.reduce((acc, link) => {
+      if (!acc.includes(link) && !excludedHrefs.has(link)) acc.push(link)
       return acc
     }, [] as string[])
 

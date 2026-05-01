@@ -39,6 +39,7 @@ export const GetAllLinksInBoxTask = {
       helpText: 'Убрать :nth-child(N) из конца селектора и взять все похожие элементы'
     }
   ] as const,
+  extraDynamicInputs: { prefix: 'Exclude Selector', addLabel: 'добавить исключение' },
   outputs: [
     {
       name: 'Links',

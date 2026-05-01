@@ -32,6 +32,7 @@ import { ExtractTableAsJsonTask } from "./ExtractTableAsJsonTask";
 import { GetAllForPriceTask } from "./GetAllForPrice";
 import { MergeArraysTask } from "./MergeArraysTask";
 import { CoalesceTask } from "./CoalesceTask";
+import { WaitTask } from "./WaitTask";
 
 type Registry = {
    [K in TaskType]: WorkflowTask & {type: K}
@@ -70,5 +71,6 @@ export const TaskRegistry: Registry = {
   [TaskType.GET_ALL_FOR_PRICE]: GetAllForPriceTask,
   [TaskType.MERGE_ARRAYS]: MergeArraysTask,
   [TaskType.COALESCE]: CoalesceTask,
+  [TaskType.WAIT]: WaitTask,
 }
    
