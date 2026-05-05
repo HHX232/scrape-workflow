@@ -33,7 +33,8 @@ import { ExtractTableAsJsonExecutor } from "./ExtractTableAsJsonExecutor";
 import { GetAllForPriceExecutor } from "./GetAllForPriceExecutor";
 import { MergeArraysExecutor } from "./MergeArraysExecutor";
 import { CoalesceExecutor } from "./CoalesceExecutor";
-import { WaitExecutor } from "./WaitExecutor";
+import { WaitExecutor } from "./WaitExecutor"
+import { ExtractAllValuesFromBoxExecutor } from "./ExtractAllValuesFromBoxExecutor";
 
 type ExecutorFn<T extends WorkflowTask> = (enviroment:ExecutionEnviroment<T>) => Promise<boolean>
 
@@ -74,4 +75,5 @@ export const ExecutorRegistry:RegistryType = {
    MERGE_ARRAYS:MergeArraysExecutor,
    COALESCE:CoalesceExecutor,
    WAIT:WaitExecutor,
+   EXTRACT_ALL_VALUES_FROM_BOX:ExtractAllValuesFromBoxExecutor,
 }

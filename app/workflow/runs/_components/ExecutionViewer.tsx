@@ -1,5 +1,4 @@
 'use client'
-import { cancelWorkflowExecution } from '@/actions/workflows/cancelWorkflowExecution'
 import { GetWorkflowExecutionWithPhases } from '@/actions/workflows/GetWorkflowExecutionWithPhases'
 import { GetWorkflowPhaseDetails } from '@/actions/workflows/GetWorkflowPhaseDetails'
 import { Badge } from '@/components/ui/badge'
@@ -42,9 +41,15 @@ export default function ExecutionViewer({initialData}: {initialData: ExecutionDa
   const isRunning = query.data?.status === WorkflowExecutionStatus.RUNNING
 
   const cancelMutation = useMutation({
-    mutationFn: cancelWorkflowExecution,
+    mutationFn: async (executionId: string) => {
+      const res = await fetch(`/api/workflows/stop-run/${executionId}`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to stop execution')
+      }
+    },
     onSuccess: () => toast.success('Execution stopped'),
-    onError: () => toast.error('Failed to stop execution')
+    onError: (err: Error) => toast.error(err.message)
   })
   useEffect(()=>{
 const phases = query.data?.phases
