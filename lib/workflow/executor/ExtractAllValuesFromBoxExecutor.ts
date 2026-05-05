@@ -65,7 +65,7 @@ export async function ExtractAllValuesFromBoxExecutor(
     })
 
     // Deduplicate
-    const unique = [...new Set(values)]
+const unique = Array.from(new Set(values))
 
     enviroment.setOutput('Values', JSON.stringify(unique))
     enviroment.setOutput('Count', String(unique.length))
