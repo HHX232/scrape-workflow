@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma'
 import { symmetricDecrypt } from '@/lib/symmetricEncrypt'
 import { ExecutionEnviroment } from '@/types/Enviroment'
-import Groq from 'groq-sdk'
+import OpenAI from 'openai'
 import { ExtractDataWithAITask } from '../task/ExtractDataWithAI'
 
 export async function ExtractDataWithAIExecutor(
@@ -38,12 +38,13 @@ export async function ExtractDataWithAIExecutor(
       return false
     }
 
-    const groq = new Groq({
-      apiKey: plainCredentialValue
+    const client = new OpenAI({
+      apiKey: plainCredentialValue,
+      baseURL: 'https://api.deepseek.com',
     })
-    
-    const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+
+    const response = await client.chat.completions.create({
+      model: 'deepseek-v4-flash',
       messages: [
         {
           role: 'system',
@@ -54,18 +55,18 @@ export async function ExtractDataWithAIExecutor(
         {role: 'user', content: prompt}
       ],
       temperature: 1,
-      max_tokens: 5000
+      max_tokens: 5000,
     })
-    
+
     enviroment.log.info('Prompt tokens: ' + `${response.usage?.prompt_tokens}`)
     enviroment.log.info('Completion tokens: ' + `${response.usage?.completion_tokens}`)
-    
+
     const result = response.choices[0].message.content
     if (!result) {
       enviroment.log.error('No result found')
       return false
     }
-    
+
     enviroment.setOutput('Extracted data', result)
     return true
   } catch (error) {
