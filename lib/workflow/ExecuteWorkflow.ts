@@ -230,10 +230,11 @@ async function executeLoopBody(
           creditsConsumed += innerFE.creditsConsumed
           if (!innerFE.success) return {failed: true, creditsConsumed}
 
-          for (const innerIdx of innerBodyIndices) {
-            const r = await executeWorkflowPhase(phases[innerIdx], enviroment, edges, userId)
-            creditsConsumed += r.creditsConsumed
-            if (!r.success) return {failed: true, creditsConsumed}
+          // Use executeLoopBody so nested ForEach nodes (3rd+ level) are handled recursively
+          if (innerBodyIndices.length > 0) {
+            const innerBodyResult = await executeLoopBody(innerBodyIndices, phases, enviroment, edges, userId)
+            creditsConsumed += innerBodyResult.creditsConsumed
+            if (innerBodyResult.failed) return {failed: true, creditsConsumed}
           }
         }
       }
