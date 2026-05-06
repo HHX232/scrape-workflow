@@ -6,7 +6,9 @@
       "Bash(node -e ' *)",
       "Bash(xargs grep *)",
       "Bash(xargs ls *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
