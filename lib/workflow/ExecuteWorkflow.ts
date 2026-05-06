@@ -16,7 +16,7 @@ import {TaskRegistry} from './task/registry'
 export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
   const execution = await prisma.workflowExecution.findUnique({
     where: {id: executionId},
-    include: {phases: true, workflow: true}
+    include: {phases: {orderBy: {number: 'asc'}}, workflow: true}
   })
   if (!execution) throw new Error('Workflow execution not found')
 
@@ -30,7 +30,7 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
   let executionCancelled = false
   const edges = JSON.parse(execution.definition).edges as Edge[]
 
-  const phases = execution.phases
+  const phases = execution.phases  // already ordered by number via Prisma orderBy
 
   let i = 0
   while (i < phases.length) {
@@ -47,7 +47,8 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
 
     if (node.data.type === TaskType.FOR_EACH) {
       setupEnviromentForPhase(node, enviroment, edges)
-      const itemsRaw = enviroment.phases[node.id]?.inputs['Items'] ?? ''
+      const cachedForEachInputs = { ...enviroment.phases[node.id].inputs }
+      const itemsRaw = cachedForEachInputs['Items'] ?? ''
 
       let items: string[] = []
       try {
@@ -81,7 +82,9 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
         ;(enviroment as any).__forEachIndex = itemIndex
 
         // (Re-)execute the FOR_EACH node itself to set Current Item / Index outputs.
-        const forEachResult = await executeWorkflowPhase(phase, enviroment, edges, execution.userId)
+        // Pass cached inputs so setupEnviromentForPhase cannot overwrite Items
+        // with a stale value from a source node that the loop body already mutated.
+        const forEachResult = await executeWorkflowPhase(phase, enviroment, edges, execution.userId, cachedForEachInputs)
         creditsConsumed += forEachResult.creditsConsumed
         if (!forEachResult.success) {
           executionFailed = true
@@ -201,7 +204,8 @@ async function executeLoopBody(
     if (node.data.type === TaskType.FOR_EACH) {
       // Read inner items fresh (outer phases have already updated the source output)
       setupEnviromentForPhase(node, enviroment, edges)
-      const innerItemsRaw = enviroment.phases[node.id]?.inputs['Items'] ?? ''
+      const cachedInnerInputs = { ...enviroment.phases[node.id].inputs }
+      const innerItemsRaw = cachedInnerInputs['Items'] ?? ''
 
       let innerItems: string[] = []
       try {
@@ -222,7 +226,7 @@ async function executeLoopBody(
           // Each inner iteration gets its own index — independent of outer
           ;(enviroment as any).__forEachIndex = ii
 
-          const innerFE = await executeWorkflowPhase(phase, enviroment, edges, userId)
+          const innerFE = await executeWorkflowPhase(phase, enviroment, edges, userId, cachedInnerInputs)
           creditsConsumed += innerFE.creditsConsumed
           if (!innerFE.success) return {failed: true, creditsConsumed}
 
@@ -299,11 +303,20 @@ async function finalizeWorkflowExecution(
     .catch(() => {})
 }
 
-async function executeWorkflowPhase(phase: ExecutionPhase, enviroment: Enviroment, edges: Edge[], userId: string) {
+async function executeWorkflowPhase(
+  phase: ExecutionPhase,
+  enviroment: Enviroment,
+  edges: Edge[],
+  userId: string,
+  inputOverrides?: Record<string, string>
+) {
   const logCollector = createLogCollector()
   const startedAt = new Date()
   const node = JSON.parse(phase.node) as AppNode
   setupEnviromentForPhase(node, enviroment, edges)
+  if (inputOverrides) {
+    Object.assign(enviroment.phases[node.id].inputs, inputOverrides)
+  }
 
   await prisma.executionPhase.update({
     where: {id: phase.id},

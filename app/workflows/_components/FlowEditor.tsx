@@ -143,7 +143,10 @@ export default function FlowEditor({workflow}: {workflow: Workflow}) {
       const sourceTask = TaskRegistry[source.data.type]
       const targetTask = TaskRegistry[target.data.type]
 
-      const output = sourceTask?.outputs?.find((output) => output.name === connection.sourceHandle)
+      let output = sourceTask?.outputs?.find((output) => output.name === connection.sourceHandle)
+      if (!output && sourceTask?.dynamicOutputPrefix && connection.sourceHandle?.startsWith(sourceTask.dynamicOutputPrefix)) {
+        output = {name: connection.sourceHandle, type: TaskParamType.STRING}
+      }
 
       const targetHandleName = connection.targetHandle?.includes('-input-')
         ? connection.targetHandle.split('-input-')[1]?.trim()

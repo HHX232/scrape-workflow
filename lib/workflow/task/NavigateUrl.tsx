@@ -1,6 +1,6 @@
 import {TaskParamType, TaskType} from '@/types/TaskType'
 import {WorkflowTask} from '@/types/workflow'
-import {Link2Icon, MousePointerClickIcon} from 'lucide-react'
+import {Link2Icon} from 'lucide-react'
 
 export const NavigateUrlTask = {
   type: TaskType.NAVIGATE_URL,
@@ -14,14 +14,23 @@ export const NavigateUrlTask = {
       type: TaskParamType.BROWSER_INSTANCE,
       required: true,
       hideHandle: false,
-      variant: 'textarea'
     },
     {
       name: 'URL',
       type: TaskParamType.STRING,
       required: true,
       hideHandle: false
+    },
+    {
+      name: 'Soft fail',
+      type: TaskParamType.BOOLEAN,
+      required: false,
+      hideHandle: true,
+      helpText: 'Не останавливать ран при ошибке навигации'
     }
   ] as const,
-  outputs: [{name: 'Web page', type: TaskParamType.BROWSER_INSTANCE}] as const
+  outputs: [
+    {name: 'Web page', type: TaskParamType.BROWSER_INSTANCE},
+    {name: 'Success', type: TaskParamType.STRING}
+  ] as const
 } satisfies WorkflowTask

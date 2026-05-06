@@ -1,5 +1,6 @@
 import { ExecutionEnviroment } from '@/types/Enviroment'
 import { CoalesceTask } from '../task/CoalesceTask'
+import * as cheerio from 'cheerio'
 
 function isEmpty(value: string): boolean {
   if (!value || value.trim() === '') return true
@@ -16,11 +17,37 @@ export async function CoalesceExecutor(
   try {
     const valueA = enviroment.getInput('Value A')
     const valueB = enviroment.getInput('Value B')
+    const selector = enviroment.getInput('Selector')
+    const pageSelector = enviroment.getInput('Page selector')
 
-    const result = !isEmpty(valueA) ? valueA : valueB
+    let useA: boolean
 
-    enviroment.log.info(`OR: Value A is ${isEmpty(valueA) ? 'empty' : 'non-empty'}, using ${!isEmpty(valueA) ? 'A' : 'B'}`)
-    enviroment.setOutput('Result', result ?? '')
+    if (pageSelector && pageSelector.trim()) {
+      const page = enviroment.getPage()
+      if (!page) {
+        enviroment.log.error('OR: Page selector задан, но браузер недоступен')
+        return false
+      }
+      const html = await page.content()
+      const $ = cheerio.load(html)
+      const found = $(pageSelector.trim()).length > 0
+      useA = found
+      enviroment.log.info(
+        `OR: page selector "${pageSelector}" ${found ? 'найден' : 'не найден'} в Web page → используем ${found ? 'A' : 'B'}`
+      )
+    } else if (selector && selector.trim()) {
+      const $ = cheerio.load(valueA ?? '')
+      const found = $(selector.trim()).length > 0
+      useA = found
+      enviroment.log.info(
+        `OR: selector "${selector}" ${found ? 'найден' : 'не найден'} в Value A → используем ${found ? 'A' : 'B'}`
+      )
+    } else {
+      useA = !isEmpty(valueA)
+      enviroment.log.info(`OR: Value A ${useA ? 'не пустой' : 'пустой'} → используем ${useA ? 'A' : 'B'}`)
+    }
+
+    enviroment.setOutput('Result', (useA ? valueA : valueB) ?? '')
     return true
   } catch (error) {
     enviroment.log.error('Error in OR (Coalesce) block')
