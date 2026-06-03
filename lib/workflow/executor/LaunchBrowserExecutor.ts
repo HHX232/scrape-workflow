@@ -2,6 +2,19 @@ import {ExecutionEnviroment} from '@/types/Enviroment'
 import puppeteer from 'puppeteer'
 import {LaunchBrowserTask} from '../task/LaunchBrowser'
 
+const PROXIES = [
+  '45.129.204.82:8000',
+  '45.129.207.251:8000',
+  '45.129.205.208:8000',
+  '45.129.205.201:8000',
+  '45.129.206.175:8000',
+  '45.129.207.9:8000',
+  '45.129.207.197:8000'
+]
+
+const PROXY_USER = 'wnd05Z'
+const PROXY_PASS = '2j7N1A'
+
 export async function LaunchBrowserExecutor(
   enviroment: ExecutionEnviroment<typeof LaunchBrowserTask>
 ): Promise<boolean> {
@@ -26,11 +39,14 @@ export async function LaunchBrowserExecutor(
       return false
     }
 
+    const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)]
+    enviroment.log.info(`Using proxy: ${proxy}`)
+
     const browser = await puppeteer.launch({
       headless: true,
       protocolTimeout: 30000,
       args: [
-        // '--proxy-server=http://brd.superproxy.io:33335',  // ЗАКОММЕНТИРОВАН ПРОКСИ
+        `--proxy-server=http://${proxy}`,
         '--ignore-certificate-errors',
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -44,11 +60,10 @@ export async function LaunchBrowserExecutor(
 
     const page = await browser.newPage()
 
-    // ЗАКОММЕНТИРОВАНА АУТЕНТИФИКАЦИЯ ПРОКСИ
-    // await page.authenticate({
-    //   username: 'brd-customer-hl_71fd2915-zone-residential_proxy1',
-    //   password: 'dbrnwpt7uwj7'
-    // })
+    await page.authenticate({
+      username: PROXY_USER,
+      password: PROXY_PASS
+    })
 
     // await page.setViewport({ width: 1920, height: 1080 })
 

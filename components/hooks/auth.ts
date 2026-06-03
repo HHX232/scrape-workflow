@@ -1,16 +1,19 @@
-
-import { cookies } from "next/headers";
-
-const DEFAULT_USER_ID = "user_local_dev";
+import prisma from '@/lib/prisma'
+import { cookies } from 'next/headers'
 
 export function auth() {
-  const cookieStore = cookies();
-  const userId = cookieStore.get("userId")?.value ?? DEFAULT_USER_ID;
+  const cookieStore = cookies()
+  const userId = cookieStore.get('userId')?.value ?? null
 
   return {
     userId,
-    protect() {
-     
-    },
-  };
+    protect() {},
+  }
+}
+
+export async function getUser() {
+  const cookieStore = cookies()
+  const userId = cookieStore.get('userId')?.value
+  if (!userId) return null
+  return prisma.user.findUnique({ where: { id: userId } })
 }
