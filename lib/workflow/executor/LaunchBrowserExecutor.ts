@@ -39,47 +39,57 @@ export async function LaunchBrowserExecutor(
       return false
     }
 
-    const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)]
-    enviroment.log.info(`Using proxy: ${proxy}`)
+    const LAUNCH_ARGS_BASE = [
+      '--ignore-certificate-errors',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      protocolTimeout: 30000,
-      args: [
-        `--proxy-server=http://${proxy}`,
-        '--ignore-certificate-errors',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
-    })
-
-    enviroment.log.info('Browser launched')
-    enviroment.setBrowser(browser)
-
-    const page = await browser.newPage()
-
-    await page.authenticate({
-      username: PROXY_USER,
-      password: PROXY_PASS
-    })
-
-    // await page.setViewport({ width: 1920, height: 1080 })
-
-    try {
-      await page.goto(validUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 30000
-      })
-    } catch (navError: any) {
-      if (navError?.message?.includes('timeout') || navError?.name === 'TimeoutError') {
-        enviroment.log.info('Page load timeout — продолжаем с доступным DOM')
-      } else {
-        throw navError
+    const navigatePage = async (page: any) => {
+      try {
+        await page.goto(validUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      } catch (navError: any) {
+        if (navError?.message?.includes('timeout') || navError?.name === 'TimeoutError') {
+          enviroment.log.info('Page load timeout — продолжаем с доступным DOM')
+        } else {
+          throw navError
+        }
       }
     }
 
+    const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)]
+    let browser: Awaited<ReturnType<typeof puppeteer.launch>>
+    let page: Awaited<ReturnType<typeof browser.newPage>>
+
+    const proxyBrowser = await puppeteer.launch({
+      headless: true,
+      protocolTimeout: 30000,
+      args: [`--proxy-server=http://${proxy}`, ...LAUNCH_ARGS_BASE]
+    })
+
+    try {
+      const proxyPage = await proxyBrowser.newPage()
+      await proxyPage.authenticate({ username: PROXY_USER, password: PROXY_PASS })
+      await navigatePage(proxyPage)
+      browser = proxyBrowser
+      page = proxyPage
+      enviroment.log.info(`Using proxy: ${proxy}`)
+    } catch (proxyErr: any) {
+      enviroment.log.info(`Proxy unavailable (${proxyErr.message}), falling back to direct connection`)
+      await proxyBrowser.close().catch(() => {})
+      browser = await puppeteer.launch({
+        headless: true,
+        protocolTimeout: 30000,
+        args: LAUNCH_ARGS_BASE
+      })
+      page = await browser.newPage()
+      await navigatePage(page)
+      enviroment.log.info('Direct connection used (no proxy)')
+    }
+
+    enviroment.setBrowser(browser)
     enviroment.setPage(page)
     enviroment.log.info(`Successfully opened page at: ${validUrl}`)
 

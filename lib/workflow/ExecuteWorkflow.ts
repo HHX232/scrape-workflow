@@ -78,6 +78,16 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
 
       // ── Execute the loop ─────────────────────────────────────────────────
       for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+        // Respect manual stop between iterations (not just between top-level phases)
+        const iterStatus = await prisma.workflowExecution.findUnique({
+          where: {id: executionId},
+          select: {status: true}
+        })
+        if (iterStatus?.status === WorkflowExecutionStatus.CANCELLED) {
+          executionCancelled = true
+          break
+        }
+
         // Set the index so ForEachExecutor knows which item to expose.
         ;(enviroment as any).__forEachIndex = itemIndex
 
@@ -102,7 +112,7 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
         }
       }
 
-      if (executionFailed) break
+      if (executionFailed || executionCancelled) break
 
       // Skip past all loop-body phases since we already executed them.
       const lastLoopIdx = Math.max(...loopPhaseIndices)
