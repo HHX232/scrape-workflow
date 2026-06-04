@@ -396,24 +396,29 @@ function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: 
 
   for (const input of inputs) {
     if (input.type === TaskParamType.BROWSER_INSTANCE) continue
+
+    // Edge connections take priority over static node values so that wired-up
+    // nodes always receive live data from upstream (e.g. a Buffer from DownloadPdf)
+    // rather than a stale placeholder that was typed before the edge was connected.
+    const connectEdge = edges.find(
+      (edge) =>
+        edge.target === node.id &&
+        (edge.targetHandle === `${node.id}-input-${input.name}` || edge.targetHandle === input.name)
+    )
+
+    if (connectEdge) {
+      const outputValue = environment.phases[connectEdge.source]?.outputs[connectEdge?.sourceHandle || '']
+      environment.phases[node.id].inputs[input.name] = outputValue
+      continue
+    }
+
     const inputValue = node.data.inputs[input.name]
     if (inputValue) {
       environment.phases[node.id].inputs[input.name] = inputValue
       continue
     }
 
-    const connectEdge = edges.find(
-      (edge) =>
-        edge.target === node.id &&
-        (edge.targetHandle === `${node.id}-input-${input.name}` || edge.targetHandle === input.name)
-    )
-    if (!connectEdge) {
-      console.error(`No connection found for input ${input.name} of node ${node.id}`)
-      continue
-    }
-
-    const outputValue = environment.phases[connectEdge.source]?.outputs[connectEdge?.sourceHandle || '']
-    environment.phases[node.id].inputs[input.name] = outputValue
+    console.error(`No connection found for input ${input.name} of node ${node.id}`)
   }
 
   // Extra dynamic inputs (e.g. exclusion selectors in GetAllLinksInBox)

@@ -53,7 +53,7 @@ export async function DownloadPdfExecutor(enviroment: ExecutionEnviroment<typeof
 
     const pdfBuffer = Buffer.from(response.data)
 
-    enviroment.setOutput('PDF file', pdfBuffer)
+    enviroment.setOutput('PDF file', pdfBuffer.toString('base64'))
     return true
   } catch (error) {
     if (axios.isAxiosError(error)) {

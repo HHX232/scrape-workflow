@@ -43,6 +43,13 @@ export async function ExtractTextFromPdfExecutor(
       `[ExtractTextFromPdf] PDF buffer size: ${(pdfBuffer.length / 1024).toFixed(2)} KB`
     )
 
+    if (pdfBuffer.length < 100) {
+      enviroment.log.error(
+        `PDF data is too small (${pdfBuffer.length} bytes) — likely a corrupt or missing value. Check that DownloadPdf is connected and ran successfully.`
+      )
+      return false
+    }
+
     enviroment.log.info(
       `Processing PDF file, size: ${(pdfBuffer.length / 1024).toFixed(2)} KB`
     )
