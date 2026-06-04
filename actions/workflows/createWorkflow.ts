@@ -25,7 +25,7 @@ export async function CreateWorkflow(form: createWorkFlowSchemaType){
   let userId: string | undefined
   try {
     const authResult = auth()
-    userId = authResult.userId
+    userId = authResult.userId ?? undefined
     console.log('[CreateWorkflow] auth userId:', userId)
   } catch (e) {
     console.error('[CreateWorkflow] auth() threw:', e)
