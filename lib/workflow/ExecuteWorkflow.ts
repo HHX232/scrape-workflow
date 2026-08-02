@@ -32,13 +32,28 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
 
   const phases = execution.phases  // already ordered by number via Prisma orderBy
 
-  let i = 0
-  while (i < phases.length) {
-    const currentStatus = await prisma.workflowExecution.findUnique({
+  // Cancellation is checked before every phase and every ForEach iteration.
+  // Hitting the (remote) DB on every single check adds up fast in tight
+  // loops — throttle it to once a second; a 1s-stale "stop" is fine.
+  const CANCEL_CHECK_INTERVAL_MS = 1000
+  let lastCancelCheckAt = 0
+  let cachedCancelled = false
+  const checkCancelled = async (): Promise<boolean> => {
+    const now = Date.now()
+    if (now - lastCancelCheckAt < CANCEL_CHECK_INTERVAL_MS) return cachedCancelled
+    const status = await prisma.workflowExecution.findUnique({
       where: {id: executionId},
       select: {status: true}
     })
-    if (currentStatus?.status === WorkflowExecutionStatus.CANCELLED) {
+    lastCancelCheckAt = now
+    cachedCancelled = status?.status === WorkflowExecutionStatus.CANCELLED
+    return cachedCancelled
+  }
+
+  try {
+  let i = 0
+  while (i < phases.length) {
+    if (await checkCancelled()) {
       executionCancelled = true
       break
     }
@@ -79,11 +94,7 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
       // ── Execute the loop ─────────────────────────────────────────────────
       for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
         // Respect manual stop between iterations (not just between top-level phases)
-        const iterStatus = await prisma.workflowExecution.findUnique({
-          where: {id: executionId},
-          select: {status: true}
-        })
-        if (iterStatus?.status === WorkflowExecutionStatus.CANCELLED) {
+        if (await checkCancelled()) {
           executionCancelled = true
           break
         }
@@ -130,6 +141,10 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
       }
       i++
     }
+  }
+  } catch (err) {
+    console.error('Workflow execution crashed:', err)
+    executionFailed = true
   }
 
   await finalizeWorkflowExecution(executionId, execution.workflowId, executionFailed, creditsConsumed, executionCancelled)
@@ -329,17 +344,36 @@ async function executeWorkflowPhase(
     Object.assign(enviroment.phases[node.id].inputs, inputOverrides)
   }
 
-  await prisma.executionPhase.update({
-    where: {id: phase.id},
-    data: {
-      status: ExecutionStatus.RUNNING,
-      startedAt,
-      inputs: JSON.stringify(enviroment.phases[node.id].inputs)
-    }
-  })
-
   const creditsRequired = TaskRegistry[node.data.type]?.credits || 0
-  let success = await decrementCredits(userId, creditsRequired, logCollector)
+
+  // Batched into one round trip instead of 3 sequential ones (mark RUNNING +
+  // ensure balance row exists + deduct credits) — matters a lot on a remote DB.
+  let success = true
+  try {
+    await prisma.$transaction([
+      prisma.executionPhase.update({
+        where: {id: phase.id},
+        data: {
+          status: ExecutionStatus.RUNNING,
+          startedAt,
+          inputs: JSON.stringify(enviroment.phases[node.id].inputs)
+        }
+      }),
+      prisma.userBalance.upsert({
+        where: {userId},
+        create: {userId, credits: 100000000},
+        update: {}
+      }),
+      prisma.userBalance.update({
+        where: {userId, credits: {gte: creditsRequired}},
+        data: {credits: {decrement: creditsRequired}}
+      })
+    ])
+  } catch (error) {
+    logCollector.error('Insufficient credits or balance error: ' + error)
+    success = false
+  }
+
   const creditsConsumed = success ? creditsRequired : 0
   if (success) {
     success = await executePhase(phase, node, enviroment, logCollector)
@@ -358,30 +392,36 @@ async function finalizePhase(
   creditsConsumed: number
 ) {
   const logs = logCollector.getAll()
-  await prisma.$transaction(async (tx) => {
-    await tx.executionPhase
-      .update({
-        where: {id: phaseId},
-        data: {
-          status: success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
-          completedAt: new Date(),
-          outputs: JSON.stringify(outputs),
-          creditsConsumed
-        }
-      })
-      .catch((err) => console.error('Failed to save phase:', err))
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.executionPhase
+        .update({
+          where: {id: phaseId},
+          data: {
+            status: success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
+            completedAt: new Date(),
+            outputs: JSON.stringify(outputs),
+            creditsConsumed
+          }
+        })
+        .catch((err) => console.error('Failed to save phase:', err))
 
-    if (logs.length > 0) {
-      await tx.executionLog.createMany({
-        data: logs.map((log) => ({
-          message: log.message,
-          timestamp: log.timestamp,
-          logLevel: log.level,
-          executionPhaseId: phaseId
-        }))
-      })
-    }
-  })
+      if (logs.length > 0) {
+        await tx.executionLog.createMany({
+          data: logs.map((log) => ({
+            message: log.message,
+            timestamp: log.timestamp,
+            logLevel: log.level,
+            executionPhaseId: phaseId
+          }))
+        })
+      }
+    },
+    // Large phase outputs (e.g. full page HTML) can take longer than the
+    // 5s Prisma default to write over the remote libSQL connection — bump
+    // the interactive transaction budget so that doesn't blow up the run.
+    {timeout: 30000, maxWait: 10000}
+  )
 }
 
 async function executePhase(
@@ -512,20 +552,3 @@ async function cleanupEnviroment(enviroment: Enviroment) {
   }
 }
 
-async function decrementCredits(userId: string, amount: number, logCollector: LogCollector) {
-  try {
-    await prisma.userBalance.upsert({
-      where: {userId},
-      create: {userId, credits: 100000000},
-      update: {}
-    })
-    await prisma.userBalance.update({
-      where: {userId, credits: {gte: amount}},
-      data: {credits: {decrement: amount}}
-    })
-    return true
-  } catch (error) {
-    logCollector.error('Insufficient credits or balance error: ' + error)
-    return false
-  }
-}
