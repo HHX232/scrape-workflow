@@ -2461,23 +2461,45 @@ ${Object.entries(UNITS).map(([code, name]) => `${code} — ${name}`).join('\n')}
         {role: 'user', content: prompt}
       ],
       temperature: 1,
-      max_tokens: 5000
+      max_tokens: 30000
     })
 
     enviroment.log.info('Prompt tokens: ' + `${response.usage?.prompt_tokens}`)
     enviroment.log.info('Completion tokens: ' + `${response.usage?.completion_tokens}`)
     enviroment.log.info('Cache hit tokens: ' + `${(response.usage as any)?.prompt_cache_hit_tokens ?? 0}`)
 
-    const result = response.choices[0].message.content
+    const choice = response.choices[0]
+    const result = choice?.message?.content
     if (!result) {
-      enviroment.log.error('No result found')
+      // Truncated previews only — the full body can be hundreds of KB and this
+      // gets persisted to the DB via the phase log (same issue that caused the
+      // Prisma transaction timeout earlier).
+      const inputPreview = truncateForLog(content)
+      const rawResponsePreview = truncateForLog(JSON.stringify(choice ?? response))
+      enviroment.log.error(`No result found (finish_reason: ${choice?.finish_reason ?? 'unknown'})`)
+      enviroment.log.error(`Input body: ${inputPreview}`)
+      enviroment.log.error(`Raw response: ${rawResponsePreview}`)
+      console.log('[ExtractDataWithAI] empty result. finish_reason:', choice?.finish_reason)
+      console.log('[ExtractDataWithAI] input body:', inputPreview)
+      console.log('[ExtractDataWithAI] raw response:', rawResponsePreview)
       return false
     }
 
     enviroment.setOutput('Extracted data', result)
     return true
   } catch (error) {
-    enviroment.log.error('Error extracting data with AI: ' + (error instanceof Error ? error.message : String(error)))
+    const bodySent = enviroment.getInput('Content') ?? ''
+    const inputPreview = truncateForLog(bodySent)
+    const message = error instanceof Error ? error.message : String(error)
+    enviroment.log.error(`Error extracting data with AI: ${message}`)
+    enviroment.log.error(`Input body: ${inputPreview}`)
+    console.log('[ExtractDataWithAI] error:', message)
+    console.log('[ExtractDataWithAI] input body:', inputPreview)
     return false
   }
+}
+
+function truncateForLog(value: string, maxLength = 500): string {
+  if (!value) return ''
+  return value.length > maxLength ? value.slice(0, maxLength) + '…' : value
 }

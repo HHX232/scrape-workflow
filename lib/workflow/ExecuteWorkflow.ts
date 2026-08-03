@@ -112,15 +112,13 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
           break
         }
 
-        // Execute all loop-body phases, supporting nested ForEach.
+        // Execute all loop-body phases, supporting nested ForEach. A failure
+        // inside the body is not fatal — it just ends this one iteration
+        // early (see executeLoopBody) and the loop moves on to the next item.
         const bodyResult = await executeLoopBody(
           loopPhaseIndices, phases, enviroment, edges, execution.userId
         )
         creditsConsumed += bodyResult.creditsConsumed
-        if (bodyResult.failed) {
-          executionFailed = true
-          break
-        }
       }
 
       if (executionFailed || executionCancelled) break
@@ -207,9 +205,17 @@ function isInsideAnyLoop(_nodeId: string, phases: ExecutionPhase[], edges: Edge[
 }
 
 /**
- * Executes a sequence of loop-body phases (by their index in the phases array).
- * If any phase is itself a FOR_EACH, it is executed as a nested loop with its
- * own independent index counter; its body phases are then skipped in the outer scan.
+ * Executes a sequence of loop-body phases (by their index in the phases array)
+ * for ONE iteration of the enclosing loop. If any phase is itself a FOR_EACH,
+ * it is executed as a nested loop with its own independent index counter; its
+ * body phases are then skipped in the outer scan.
+ *
+ * A phase failure is NOT fatal to the whole workflow: it just ends the
+ * current iteration early (remaining body phases for this item are skipped,
+ * since they'd be working off missing upstream data anyway) and the caller's
+ * loop moves on to its next item. A failure inside a nested ForEach only
+ * skips that nested loop's current iteration — it never propagates up to
+ * abort the outer loop or the rest of the workflow.
  */
 async function executeLoopBody(
   phaseIndices: number[],
@@ -217,7 +223,7 @@ async function executeLoopBody(
   enviroment: Enviroment,
   edges: Edge[],
   userId: string
-): Promise<{failed: boolean; creditsConsumed: number}> {
+): Promise<{creditsConsumed: number}> {
   let creditsConsumed = 0
   let i = 0
 
@@ -253,13 +259,15 @@ async function executeLoopBody(
 
           const innerFE = await executeWorkflowPhase(phase, enviroment, edges, userId, cachedInnerInputs)
           creditsConsumed += innerFE.creditsConsumed
-          if (!innerFE.success) return {failed: true, creditsConsumed}
+          if (!innerFE.success) {
+            console.log(`[ExecuteWorkflow] Nested ForEach iteration ${ii + 1}/${innerItems.length} failed — skipping to next item`)
+            continue
+          }
 
           // Use executeLoopBody so nested ForEach nodes (3rd+ level) are handled recursively
           if (innerBodyIndices.length > 0) {
             const innerBodyResult = await executeLoopBody(innerBodyIndices, phases, enviroment, edges, userId)
             creditsConsumed += innerBodyResult.creditsConsumed
-            if (innerBodyResult.failed) return {failed: true, creditsConsumed}
           }
         }
       }
@@ -274,12 +282,15 @@ async function executeLoopBody(
     } else {
       const result = await executeWorkflowPhase(phase, enviroment, edges, userId)
       creditsConsumed += result.creditsConsumed
-      if (!result.success) return {failed: true, creditsConsumed}
+      if (!result.success) {
+        console.log(`[ExecuteWorkflow] Phase "${phase.name}" failed inside loop body — skipping rest of this iteration`)
+        break
+      }
       i++
     }
   }
 
-  return {failed: false, creditsConsumed}
+  return {creditsConsumed}
 }
 
 // ── Unchanged helpers from original executeWorkflow.ts ────────────────────────
