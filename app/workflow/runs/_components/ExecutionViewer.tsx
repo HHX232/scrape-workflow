@@ -17,7 +17,7 @@ import { ExecutionStatus, WorkflowExecutionStatus } from '@/types/workflow'
 import ReactCountUpWrapper from '@/components/ReactCountUpWrapper'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarIcon, CircleDashedIcon, ClockIcon, CoinsIcon, Loader2Icon, LucideIcon, SquareIcon, WorkflowIcon } from 'lucide-react'
+import { CalendarIcon, CircleDashedIcon, ClockIcon, CoinsIcon, Loader2Icon, LucideIcon, SkipForwardIcon, SquareIcon, WorkflowIcon } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { default as PhasesStatusBadge, default as PhaseStatusBadge } from './PhasesStatusBadge'
@@ -51,6 +51,21 @@ export default function ExecutionViewer({initialData}: {initialData: ExecutionDa
     onSuccess: () => toast.success('Execution stopped'),
     onError: (err: Error) => toast.error(err.message)
   })
+
+  const skipPhaseMutation = useMutation({
+    mutationFn: async (phaseId: string) => {
+      const res = await fetch(`/api/workflows/skip-phase/${phaseId}`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to skip phase')
+      }
+    },
+    onSuccess: () => toast.success('Phase will return an empty string and continue'),
+    onError: (err: Error) => toast.error(err.message)
+  })
+
+  const runningPhase = query.data?.phases.find((phase) => (phase as any).status === ExecutionStatus.RUNNING)
+
   useEffect(()=>{
 const phases = query.data?.phases
 if(isRunning && phases){
@@ -128,16 +143,31 @@ if(!isRunning && phases){
           <div className='flex flex-col items-center gap-2 justify-center w-full h-full'>
             <p className='font-bold'>Run is in progress, please wait</p>
             <Loader2Icon size={20} className='animate-spin' />
-            <Button
-              variant='destructive'
-              size='sm'
-              className='mt-2 gap-2'
-              disabled={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate(query.data!.id)}
-            >
-              {cancelMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SquareIcon size={14} />}
-              Stop execution
-            </Button>
+            {runningPhase && <p className='text-sm text-muted-foreground'>Stuck on: {runningPhase.name}</p>}
+            <div className='flex gap-2 mt-2'>
+              <Button
+                variant='destructive'
+                size='sm'
+                className='gap-2'
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate(query.data!.id)}
+              >
+                {cancelMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SquareIcon size={14} />}
+                Stop execution
+              </Button>
+              {runningPhase && (
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='gap-2'
+                  disabled={skipPhaseMutation.isPending}
+                  onClick={() => skipPhaseMutation.mutate(runningPhase.id)}
+                >
+                  {skipPhaseMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SkipForwardIcon size={14} />}
+                  Return empty string
+                </Button>
+              )}
+            </div>
           </div>
         )}
         {!isRunning && !selectedPhases && (

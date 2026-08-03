@@ -11,6 +11,7 @@ import {ExecutionPhase} from '../generated/prisma'
 import {createLogCollector} from '../log'
 import prisma from '../prisma'
 import {ExecutorRegistry} from './executor/registry'
+import {consumeSkipRequest} from './skipSignals'
 import {TaskRegistry} from './task/registry'
 
 export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
@@ -435,8 +436,10 @@ async function finalizePhase(
   )
 }
 
+const SKIP_POLL_MS = 500
+
 async function executePhase(
-  _phase: ExecutionPhase,
+  phase: ExecutionPhase,
   node: AppNode,
   enviroment: Enviroment,
   logCollector: LogCollector
@@ -447,7 +450,36 @@ async function executePhase(
     return false
   }
   const executionEnviroment: ExecutionEnviroment<any> = createExecutionEnviroment(node, enviroment, logCollector)
-  return runFn(executionEnviroment)
+
+  // Manual "return empty string" button (see skip-phase API route): polls an
+  // in-memory flag while the real executor call is in flight. If the user
+  // triggers it, we don't wait for the (stuck) executor any further — we
+  // blank out this phase's declared outputs and let the workflow move on.
+  // NOTE: the original executor call keeps running in the background (JS
+  // can't force-cancel an arbitrary in-flight promise) — if it eventually
+  // resolves, its result is simply ignored.
+  let pollTimer: ReturnType<typeof setInterval> | undefined
+  const skipSignal = new Promise<'skip'>((resolve) => {
+    pollTimer = setInterval(() => {
+      if (consumeSkipRequest(phase.id)) resolve('skip')
+    }, SKIP_POLL_MS)
+  })
+
+  try {
+    const result = await Promise.race([runFn(executionEnviroment), skipSignal])
+    if (result === 'skip') {
+      const outputNames = (TaskRegistry[node.data.type]?.outputs as readonly {name: string}[] | undefined) ?? []
+      for (const output of outputNames) {
+        enviroment.phases[node.id].outputs[output.name] = ''
+      }
+      logCollector.info('Этап пропущен вручную пользователем — возвращена пустая строка, выполнение продолжено')
+      console.log(`[ExecuteWorkflow] Phase "${phase.name}" manually skipped by user`)
+      return true
+    }
+    return result
+  } finally {
+    clearInterval(pollTimer)
+  }
 }
 
 function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: Edge[]) {

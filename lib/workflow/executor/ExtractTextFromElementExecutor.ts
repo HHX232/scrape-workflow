@@ -3,9 +3,14 @@ import {Worker} from 'worker_threads'
 import {ExtractTextFromElement} from '../task/ExtractTextFromElement'
 
 const PLACEHOLDER = 'ТЕКСТ НЕ НАЙДЕН'
-const TIMEOUT_MS = 30_000
+const DEFAULT_TIMEOUT_MS = 30_000
 const CHUNK_SIZE = 5 * 1024 * 1024 // 5 MB per chunk
 const MAX_CHUNKS = 3
+
+// Отличаем "воркер не успел за отведённое время" от обычного "элемент не
+// найден", чтобы по таймауту отдавать пустую строку (для блока OR), а не
+// плейсхолдер PLACEHOLDER.
+class WorkerTimeoutError extends Error {}
 
 const WORKER_CODE = `
 const { parentPort, workerData } = require('worker_threads')
@@ -62,7 +67,7 @@ function splitHtml(html: string): string[] {
   return chunks
 }
 
-function runWorker(html: string, selector: string, joinMultiple: boolean): Promise<string | null> {
+function runWorker(html: string, selector: string, joinMultiple: boolean, timeoutMs: number): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(WORKER_CODE, {
       eval: true,
@@ -71,8 +76,8 @@ function runWorker(html: string, selector: string, joinMultiple: boolean): Promi
 
     const timer = setTimeout(() => {
       worker.terminate()
-      reject(new Error(`Worker timeout after ${TIMEOUT_MS}ms`))
-    }, TIMEOUT_MS)
+      reject(new WorkerTimeoutError(`Worker timeout after ${timeoutMs}ms`))
+    }, timeoutMs)
 
     worker.once('message', (msg: {text?: string | null; error?: string}) => {
       clearTimeout(timer)
@@ -109,11 +114,16 @@ export async function ExtractTextFromElementExecutor(
     enviroment.log.info(`HTML разбит на ${chunks.length} части для параллельного поиска`)
   }
 
+  const timeoutMsRaw = enviroment.getInput('Timeout Ms')
+  const userTimeoutMs = timeoutMsRaw ? Number(timeoutMsRaw) : NaN
+  const hasUserTimeout = Number.isFinite(userTimeoutMs) && userTimeoutMs > 0
+  const effectiveTimeoutMs = hasUserTimeout ? userTimeoutMs : DEFAULT_TIMEOUT_MS
+
   try {
     // Запускаем все чанки параллельно, берём первый непустой результат
     const text = await Promise.any(
       chunks.map(chunk =>
-        runWorker(chunk, selector, joinMultiple).then(result => {
+        runWorker(chunk, selector, joinMultiple, effectiveTimeoutMs).then(result => {
           if (!result) throw new Error('not found in chunk')
           return result
         })
@@ -122,8 +132,22 @@ export async function ExtractTextFromElementExecutor(
 
     enviroment.setOutput('Extracted text', text)
     return true
-  } catch {
-    // Promise.any выбрасывает AggregateError если все чанки вернули null/ошибку
+  } catch (err) {
+    // Promise.any выбрасывает AggregateError если все чанки вернули null/ошибку.
+    // Если ВСЕ чанки упали именно по таймауту — это не "не найдено", а "не
+    // успели поискать" — отдаём пустую строку, чтобы блок OR корректно
+    // распознал отсутствие результата и взял ветку "иначе".
+    const allTimedOut =
+      hasUserTimeout &&
+      err instanceof AggregateError &&
+      err.errors.every((e: unknown) => e instanceof WorkerTimeoutError)
+
+    if (allTimedOut) {
+      enviroment.log.info(`Извлечение прервано по таймауту (${effectiveTimeoutMs}мс) — пропускаем этап, возвращаем пустое значение`)
+      enviroment.setOutput('Extracted text', '')
+      return true
+    }
+
     enviroment.log.info(`Элемент не найден по селектору: ${selector}`)
     enviroment.setOutput('Extracted text', PLACEHOLDER)
     return true

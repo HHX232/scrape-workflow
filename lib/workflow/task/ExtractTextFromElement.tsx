@@ -28,6 +28,14 @@ export const ExtractTextFromElement = {
       required: false,
       hideHandle: true,
       helpText: 'Если selector находит несколько элементов — соединить их текст через два переноса строки'
+    },
+    {
+      name: 'Timeout Ms',
+      type: TaskParamType.STRING,
+      required: false,
+      hideHandle: true,
+      placeholder: 'число милисекунд - 5000',
+      helpText: 'Необязательно. Максимальное время поиска в мс — по истечении этап пропускается и возвращается пустое значение (например, для блока OR)'
     }
   ] as const,
   outputs: [
