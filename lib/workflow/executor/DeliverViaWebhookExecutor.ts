@@ -1,5 +1,6 @@
 import { ExecutionEnviroment } from '@/types/Enviroment'
 import { DeliverViaWebhookTask } from '../task/DeliverViaWebhook'
+import { prepareWebhookBody } from './webhookBodyUtils'
 
 export async function DeliverViaWebhookExecutor(
   enviroment: ExecutionEnviroment<typeof DeliverViaWebhookTask>
@@ -16,14 +17,7 @@ export async function DeliverViaWebhookExecutor(
       return false
     }
 
-    // Если body уже валидный JSON-строка — отправляем как есть, иначе оборачиваем
-    let bodyToSend: string
-    try {
-      JSON.parse(body)
-      bodyToSend = body
-    } catch {
-      bodyToSend = JSON.stringify(body)
-    }
+    const bodyToSend = prepareWebhookBody(body)
 
     const response = await fetch(targetUrl, {
       method: 'POST',
