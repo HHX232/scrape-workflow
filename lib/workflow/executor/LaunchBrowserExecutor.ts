@@ -1,5 +1,6 @@
 import {ExecutionEnviroment} from '@/types/Enviroment'
 import puppeteer from 'puppeteer'
+import {trackBrowserClosed, trackBrowserOpened} from '../browserTracker'
 import {LaunchBrowserTask} from '../task/LaunchBrowser'
 
 const PROXIES = [
@@ -57,6 +58,19 @@ export async function LaunchBrowserExecutor(
     }
 
     const isDev = process.env.NODE_ENV === 'development'
+
+    // The environment only ever tracks ONE browser/page at a time. If a
+    // previous LaunchBrowser call (e.g. an earlier ForEach iteration) left
+    // its browser open, close it now — otherwise every iteration leaks a
+    // whole Chromium process that never gets closed until the entire
+    // workflow finishes, which can exhaust RAM/CPU on long loops.
+    const previousBrowser = enviroment.getBrowser()
+    if (previousBrowser) {
+      await previousBrowser.close().catch(() => {})
+      trackBrowserClosed('previous iteration cleanup')
+      enviroment.log.info('Closed browser left over from a previous iteration')
+    }
+
     const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)]
     let browser: Awaited<ReturnType<typeof puppeteer.launch>>
     let page: Awaited<ReturnType<typeof browser.newPage>>
@@ -66,6 +80,7 @@ export async function LaunchBrowserExecutor(
       protocolTimeout: 30000,
       args: [`--proxy-server=http://${proxy}`, ...LAUNCH_ARGS_BASE]
     })
+    trackBrowserOpened('proxy attempt')
 
     try {
       const proxyPage = await proxyBrowser.newPage()
@@ -77,11 +92,13 @@ export async function LaunchBrowserExecutor(
     } catch (proxyErr: any) {
       enviroment.log.info(`Proxy unavailable (${proxyErr.message}), falling back to direct connection`)
       await proxyBrowser.close().catch(() => {})
+      trackBrowserClosed('proxy attempt failed')
       browser = await puppeteer.launch({
         headless: !isDev,
         protocolTimeout: 30000,
         args: LAUNCH_ARGS_BASE
       })
+      trackBrowserOpened('direct fallback')
       page = await browser.newPage()
       await navigatePage(page)
       enviroment.log.info('Direct connection used (no proxy)')

@@ -17,7 +17,7 @@ import { ExecutionStatus, WorkflowExecutionStatus } from '@/types/workflow'
 import ReactCountUpWrapper from '@/components/ReactCountUpWrapper'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarIcon, CircleDashedIcon, ClockIcon, CoinsIcon, Loader2Icon, LucideIcon, SkipForwardIcon, SquareIcon, WorkflowIcon } from 'lucide-react'
+import { CalendarIcon, ChevronsRightIcon, CircleDashedIcon, ClockIcon, CoinsIcon, HelpCircleIcon, Loader2Icon, LucideIcon, RotateCcwIcon, SkipForwardIcon, SquareIcon, WorkflowIcon } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { default as PhasesStatusBadge, default as PhaseStatusBadge } from './PhasesStatusBadge'
@@ -64,7 +64,43 @@ export default function ExecutionViewer({initialData}: {initialData: ExecutionDa
     onError: (err: Error) => toast.error(err.message)
   })
 
+  const restartPhaseMutation = useMutation({
+    mutationFn: async (phaseId: string) => {
+      const res = await fetch(`/api/workflows/restart-phase/${phaseId}`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to restart phase')
+      }
+    },
+    onSuccess: () => toast.success('Phase will be restarted'),
+    onError: (err: Error) => toast.error(err.message)
+  })
+
+  const skipIterationMutation = useMutation({
+    mutationFn: async (phaseId: string) => {
+      const res = await fetch(`/api/workflows/skip-iteration/${phaseId}`, { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to skip iteration')
+      }
+    },
+    onSuccess: () => toast.success('Current loop iteration will be skipped'),
+    onError: (err: Error) => toast.error(err.message)
+  })
+
   const runningPhase = query.data?.phases.find((phase) => (phase as any).status === ExecutionStatus.RUNNING)
+  const runningPhaseIndex = runningPhase ? (query.data?.phases.findIndex((p) => p.id === runningPhase.id) ?? -1) : -1
+
+  const handleWhichPhaseActive = () => {
+    if (!runningPhase) {
+      toast.info('No phase is currently running')
+      console.log('[ExecutionViewer] which-phase-active: nothing running')
+      return
+    }
+    const label = `Phase ${runningPhaseIndex + 1} — ${runningPhase.name}`
+    toast.info(label)
+    console.log(`[ExecutionViewer] which-phase-active: ${label} (id: ${runningPhase.id})`)
+  }
 
   useEffect(()=>{
 const phases = query.data?.phases
@@ -144,7 +180,7 @@ if(!isRunning && phases){
             <p className='font-bold'>Run is in progress, please wait</p>
             <Loader2Icon size={20} className='animate-spin' />
             {runningPhase && <p className='text-sm text-muted-foreground'>Stuck on: {runningPhase.name}</p>}
-            <div className='flex gap-2 mt-2'>
+            <div className='flex flex-wrap justify-center gap-2 mt-2 max-w-md'>
               <Button
                 variant='destructive'
                 size='sm'
@@ -155,17 +191,43 @@ if(!isRunning && phases){
                 {cancelMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SquareIcon size={14} />}
                 Stop execution
               </Button>
+              <Button variant='outline' size='sm' className='gap-2' onClick={handleWhichPhaseActive}>
+                <HelpCircleIcon size={14} />
+                Which phase is active?
+              </Button>
               {runningPhase && (
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='gap-2'
-                  disabled={skipPhaseMutation.isPending}
-                  onClick={() => skipPhaseMutation.mutate(runningPhase.id)}
-                >
-                  {skipPhaseMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SkipForwardIcon size={14} />}
-                  Return empty string
-                </Button>
+                <>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    disabled={restartPhaseMutation.isPending}
+                    onClick={() => restartPhaseMutation.mutate(runningPhase.id)}
+                  >
+                    {restartPhaseMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <RotateCcwIcon size={14} />}
+                    Restart phase
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    disabled={skipPhaseMutation.isPending}
+                    onClick={() => skipPhaseMutation.mutate(runningPhase.id)}
+                  >
+                    {skipPhaseMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <SkipForwardIcon size={14} />}
+                    Return empty string
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    disabled={skipIterationMutation.isPending}
+                    onClick={() => skipIterationMutation.mutate(runningPhase.id)}
+                  >
+                    {skipIterationMutation.isPending ? <Loader2Icon size={14} className='animate-spin' /> : <ChevronsRightIcon size={14} />}
+                    Skip iteration
+                  </Button>
+                </>
               )}
             </div>
           </div>

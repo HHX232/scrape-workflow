@@ -7,8 +7,8 @@ export async function POST(_req: NextRequest, { params }: { params: { phaseId: s
   const guard = await guardPhaseSignal(phaseId)
   if (!guard.ok) return guard.response
 
-  requestPhaseSignal(phaseId, 'skip')
-  console.log(`[skip-phase] Requested for phase "${guard.phaseName}" (${phaseId})`)
+  requestPhaseSignal(phaseId, 'skipIteration')
+  console.log(`[skip-iteration] Requested for phase "${guard.phaseName}" (${phaseId})`)
 
   return NextResponse.json({ success: true })
 }

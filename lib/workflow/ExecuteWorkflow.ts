@@ -8,10 +8,12 @@ import {revalidatePath} from 'next/cache'
 import {Browser, Page} from 'puppeteer'
 import 'server-only'
 import {ExecutionPhase} from '../generated/prisma'
+import {beginAttempt, getGenerationsMap, isCurrentAttempt} from './attemptGeneration'
+import {trackBrowserClosed} from './browserTracker'
 import {createLogCollector} from '../log'
 import prisma from '../prisma'
 import {ExecutorRegistry} from './executor/registry'
-import {consumeSkipRequest} from './skipSignals'
+import {consumePhaseSignal, PhaseSignal} from './skipSignals'
 import {TaskRegistry} from './task/registry'
 
 export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
@@ -438,6 +440,23 @@ async function finalizePhase(
 
 const SKIP_POLL_MS = 500
 
+// Races the real executor call against a poll for a manually-triggered
+// PhaseSignal (see skipSignals.ts + the three API routes: skip-phase,
+// restart-phase, skip-iteration). If a signal fires before the executor
+// settles, we don't wait for it any further:
+//   - 'skip'          → blank this phase's declared outputs, report success,
+//                        workflow continues to the next phase normally.
+//   - 'restart'       → re-invoke the executor from scratch (loop again).
+//   - 'skipIteration' → report FAILURE for this phase. Outside a loop that's
+//                        fatal (same as any other failure); inside a loop
+//                        body it's caught by executeLoopBody's existing
+//                        non-fatal "end this iteration early, move to the
+//                        next item" handling — no new machinery needed there.
+// NOTE: the abandoned original executor call keeps running in the background
+// (JS can't force-cancel an arbitrary in-flight promise). If it eventually
+// resolves, its result — and any setOutput/log calls it makes — is simply
+// ignored, UNLESS a 'restart' happened, in which case a stray late write from
+// the abandoned attempt could theoretically race with the fresh retry.
 async function executePhase(
   phase: ExecutionPhase,
   node: AppNode,
@@ -449,24 +468,46 @@ async function executePhase(
     logCollector.error(`No executor found for task type ${node.data.type}`)
     return false
   }
-  const executionEnviroment: ExecutionEnviroment<any> = createExecutionEnviroment(node, enviroment, logCollector)
 
-  // Manual "return empty string" button (see skip-phase API route): polls an
-  // in-memory flag while the real executor call is in flight. If the user
-  // triggers it, we don't wait for the (stuck) executor any further — we
-  // blank out this phase's declared outputs and let the workflow move on.
-  // NOTE: the original executor call keeps running in the background (JS
-  // can't force-cancel an arbitrary in-flight promise) — if it eventually
-  // resolves, its result is simply ignored.
-  let pollTimer: ReturnType<typeof setInterval> | undefined
-  const skipSignal = new Promise<'skip'>((resolve) => {
-    pollTimer = setInterval(() => {
-      if (consumeSkipRequest(phase.id)) resolve('skip')
-    }, SKIP_POLL_MS)
-  })
+  const generations = getGenerationsMap(enviroment)
 
-  try {
-    const result = await Promise.race([runFn(executionEnviroment), skipSignal])
+  while (true) {
+    const generation = beginAttempt(generations, node.id)
+    const executionEnviroment: ExecutionEnviroment<any> = createExecutionEnviroment(
+      node,
+      enviroment,
+      logCollector,
+      () => isCurrentAttempt(generations, node.id, generation)
+    )
+
+    let pollTimer: ReturnType<typeof setInterval> | undefined
+    const signalPromise = new Promise<PhaseSignal>((resolve) => {
+      pollTimer = setInterval(() => {
+        const signal = consumePhaseSignal(phase.id)
+        if (signal) resolve(signal)
+      }, SKIP_POLL_MS)
+    })
+
+    let result: boolean | PhaseSignal
+    try {
+      result = await Promise.race([runFn(executionEnviroment), signalPromise])
+    } finally {
+      clearInterval(pollTimer)
+    }
+
+    if (result === 'restart' || result === 'skip' || result === 'skipIteration') {
+      // Invalidate this attempt right away so a late write from the
+      // now-abandoned in-flight call (if it ever resolves) gets discarded
+      // instead of clobbering what happens next.
+      beginAttempt(generations, node.id)
+    }
+
+    if (result === 'restart') {
+      logCollector.info('Этап перезапущен вручную пользователем')
+      console.log(`[ExecuteWorkflow] Phase "${phase.name}" manually restarted by user`)
+      continue
+    }
+
     if (result === 'skip') {
       const outputNames = (TaskRegistry[node.data.type]?.outputs as readonly {name: string}[] | undefined) ?? []
       for (const output of outputNames) {
@@ -476,9 +517,14 @@ async function executePhase(
       console.log(`[ExecuteWorkflow] Phase "${phase.name}" manually skipped by user`)
       return true
     }
+
+    if (result === 'skipIteration') {
+      logCollector.info('Итерация пропущена вручную пользователем')
+      console.log(`[ExecuteWorkflow] Phase "${phase.name}" — iteration manually skipped by user`)
+      return false
+    }
+
     return result
-  } finally {
-    clearInterval(pollTimer)
   }
 }
 
@@ -557,21 +603,37 @@ function setupEnviromentForPhase(node: AppNode, environment: Enviroment, edges: 
 function createExecutionEnviroment(
   node: AppNode,
   enviroment: Enviroment,
-  logCollector: LogCollector
+  logCollector: LogCollector,
+  // True while this specific attempt (see executePhase) is still the current
+  // one for this node. A restart/skip/skipIteration bumps the generation and
+  // moves on WITHOUT cancelling the abandoned in-flight call — if it later
+  // resolves anyway, its writes here must be discarded (and any browser it
+  // opens must be closed, not leaked) instead of clobbering whatever the
+  // newer attempt (or the next loop iteration reusing this same node) wrote.
+  isCurrentAttempt: () => boolean = () => true
 ): ExecutionEnviroment<any> {
   return {
     getInput: (name: string) => enviroment.phases[node?.id]?.inputs[name],
     setOutput: (name: string, value: string) => {
+      if (!isCurrentAttempt()) return
       if (enviroment.phases[node?.id]?.outputs) {
         enviroment.phases[node?.id].outputs[name] = value
       }
     },
     getBrowser: () => enviroment.browser,
     setBrowser: (browser: Browser) => {
+      if (!isCurrentAttempt()) {
+        browser.close().catch(() => {})
+        trackBrowserClosed('stale/abandoned attempt')
+        return
+      }
       enviroment.browser = browser
     },
     getPage: () => enviroment.page,
-    setPage: (page: Page) => (enviroment.page = page),
+    setPage: (page: Page) => {
+      if (!isCurrentAttempt()) return
+      enviroment.page = page
+    },
     log: logCollector,
     // Expose accumulators and loop index so executors can use them
     get __forEachIndex() {
@@ -592,6 +654,7 @@ function createExecutionEnviroment(
 async function cleanupEnviroment(enviroment: Enviroment) {
   if (enviroment.browser) {
     await enviroment.browser.close().catch((error) => console.error('Cannot close browser:', error))
+    trackBrowserClosed('workflow finished')
   }
 }
 

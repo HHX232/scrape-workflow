@@ -1,4 +1,4 @@
-// In-memory (per server-процесс) сигнал "пропустить этот этап прямо сейчас".
+// In-memory (per server-процесс) сигналы ручного управления зависшим этапом.
 // Не через БД: сигнал нужен только внутри ТОГО ЖЕ Node-процесса, где крутится
 // ExecuteWorkflow — лишний round-trip к удалённой БД тут не нужен (и мы их
 // специально сокращали в другом месте).
@@ -6,21 +6,22 @@
 // Ограничение: не переживает рестарт сервера и не работает, если execute
 // и API-роут скипа оказались на разных инстансах при горизонтальном
 // масштабировании — для одного процесса (next dev / next start) этого хватает.
+export type PhaseSignal = 'skip' | 'restart' | 'skipIteration'
+
 declare global {
-  var __skipPhaseRequests: Set<string> | undefined
+  var __phaseSignals: Map<string, PhaseSignal> | undefined
 }
 
-const skipRequests = globalThis.__skipPhaseRequests ?? new Set<string>()
-globalThis.__skipPhaseRequests = skipRequests
+const phaseSignals = globalThis.__phaseSignals ?? new Map<string, PhaseSignal>()
+globalThis.__phaseSignals = phaseSignals
 
-export function requestPhaseSkip(phaseId: string) {
-  skipRequests.add(phaseId)
+export function requestPhaseSignal(phaseId: string, signal: PhaseSignal) {
+  phaseSignals.set(phaseId, signal)
 }
 
-export function consumeSkipRequest(phaseId: string): boolean {
-  if (skipRequests.has(phaseId)) {
-    skipRequests.delete(phaseId)
-    return true
-  }
-  return false
+export function consumePhaseSignal(phaseId: string): PhaseSignal | null {
+  const signal = phaseSignals.get(phaseId)
+  if (!signal) return null
+  phaseSignals.delete(phaseId)
+  return signal
 }
