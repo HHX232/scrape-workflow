@@ -10,6 +10,7 @@ import 'server-only'
 import {ExecutionPhase} from '../generated/prisma'
 import {beginAttempt, getGenerationsMap, isCurrentAttempt} from './attemptGeneration'
 import {trackBrowserClosed} from './browserTracker'
+import {filterUnseenItems, getSeenItemsMap} from './foreachDedup'
 import {createLogCollector} from '../log'
 import prisma from '../prisma'
 import {ExecutorRegistry} from './executor/registry'
@@ -251,19 +252,34 @@ async function executeLoopBody(
       const innerBodyIndices = getLoopPhaseIndices(phases, node.id, edges, phaseIdx + 1)
         .filter(idx => phaseIndices.includes(idx))
 
+      // "Костыль" против дублирования: если Items этого узла питаются от
+      // аккумулятора, который продолжает расти на каждом проходе внешнего
+      // цикла, повторный вход сюда без этой защиты заново обработал бы ВЕСЬ
+      // текущий (уже выросший) список — включая уже обработанные элементы.
+      // Обрабатываем только те значения, которых этот узел раньше не видел.
+      const seenMap = getSeenItemsMap(enviroment)
+      const unseenItems = filterUnseenItems(seenMap, node.id, innerItems)
+
       if (innerItems.length === 0) {
         const lc = createLogCollector()
         lc.info('ForEach (nested): Items is empty, skipping inner loop')
         await finalizePhase(phase.id, true, {}, lc, 0)
+      } else if (unseenItems.length === 0) {
+        const lc = createLogCollector()
+        lc.info(`ForEach (nested): all ${innerItems.length} item(s) already processed in a previous outer iteration — nothing new`)
+        console.log(`[ExecuteWorkflow] Nested ForEach "${phase.name}" — no new items since last entry (${innerItems.length} already processed)`)
+        await finalizePhase(phase.id, true, {}, lc, 0)
       } else {
-        for (let ii = 0; ii < innerItems.length; ii++) {
-          // Each inner iteration gets its own index — independent of outer
-          ;(enviroment as any).__forEachIndex = ii
+        for (const {value, index} of unseenItems) {
+          // Each inner iteration gets its own index — independent of outer.
+          // Must be the index within the FULL (uncut) Items list, since
+          // ForEachExecutor itself re-reads the full list and indexes into it.
+          ;(enviroment as any).__forEachIndex = index
 
           const innerFE = await executeWorkflowPhase(phase, enviroment, edges, userId, cachedInnerInputs)
           creditsConsumed += innerFE.creditsConsumed
           if (!innerFE.success) {
-            console.log(`[ExecuteWorkflow] Nested ForEach iteration ${ii + 1}/${innerItems.length} failed — skipping to next item`)
+            console.log(`[ExecuteWorkflow] Nested ForEach item "${value}" failed — skipping to next item`)
             continue
           }
 
