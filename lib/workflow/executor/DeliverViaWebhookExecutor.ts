@@ -28,14 +28,27 @@ export async function DeliverViaWebhookExecutor(
     })
     const statusCode = response.status
     if (statusCode < 200 || statusCode >= 300) {
-      enviroment.log.error(`Error fetch body with status code: ${statusCode}`)
+      const errorBody = await response.text().catch(() => '')
+      const sentPreview = truncateForLog(bodyToSend)
+      const responsePreview = truncateForLog(errorBody)
+      enviroment.log.error(`Webhook returned status ${statusCode}`)
+      enviroment.log.error(`Sent body: ${sentPreview}`)
+      enviroment.log.error(`Response body: ${responsePreview}`)
+      console.log(`[DeliverViaWebhook] ${statusCode} error. sent:`, sentPreview, 'response:', responsePreview)
       return false
     }
     const responseBody = await response.json()
     enviroment.log.info(`Response body: ${JSON.stringify(responseBody, null, 4)}`)
     return true
   } catch (error) {
-    enviroment.log.error('Error fetching body')
+    const message = error instanceof Error ? error.message : String(error)
+    enviroment.log.error(`Error fetching body: ${message}`)
+    console.log('[DeliverViaWebhook] fetch error:', message)
     return false
   }
+}
+
+function truncateForLog(value: string, maxLength = 500): string {
+  if (!value) return ''
+  return value.length > maxLength ? value.slice(0, maxLength) + '…' : value
 }
