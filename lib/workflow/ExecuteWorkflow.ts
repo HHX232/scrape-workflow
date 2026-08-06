@@ -12,6 +12,7 @@ import {beginAttempt, getGenerationsMap, isCurrentAttempt} from './attemptGenera
 import {trackBrowserClosed} from './browserTracker'
 import {filterUnseenItems, getSeenItemsMap} from './foreachDedup'
 import {createLogCollector} from '../log'
+import {computeBranchSkipIndices, isBranchingCoalesce} from './orBranching'
 import prisma from '../prisma'
 import {ExecutorRegistry} from './executor/registry'
 import {consumePhaseSignal, PhaseSignal} from './skipSignals'
@@ -54,6 +55,10 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
     return cachedCancelled
   }
 
+  // Phases exclusively belonging to a non-taken OR branch ("Раздельные
+  // выходы") end up here and are marked SKIPPED instead of executed.
+  const skippedPhaseIndices = new Set<number>()
+
   try {
   let i = 0
   while (i < phases.length) {
@@ -61,6 +66,17 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
       executionCancelled = true
       break
     }
+
+    if (skippedPhaseIndices.has(i)) {
+      const skippedPhase = phases[i]
+      const lc = createLogCollector()
+      lc.info('Фаза пропущена — находится в неактивной ветке OR (Раздельные выходы)')
+      await finalizePhase(skippedPhase.id, true, {}, lc, 0, ExecutionStatus.SKIPPED)
+      console.log(`[ExecuteWorkflow] Phase "${skippedPhase.name}" skipped (inactive OR branch)`)
+      i++
+      continue
+    }
+
     const phase = phases[i]
     const node = JSON.parse(phase.node) as AppNode
 
@@ -140,6 +156,13 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
       if (!phaseExecution.success) {
         executionFailed = true
         break
+      }
+      if (isBranchingCoalesce(node, TaskType.COALESCE)) {
+        const skipIndices = computeBranchSkipIndices(phases, node, enviroment, edges, i + 1)
+        for (const idx of skipIndices) skippedPhaseIndices.add(idx)
+        if (skipIndices.length > 0) {
+          console.log(`[ExecuteWorkflow] OR "${phase.name}" branched — marking ${skipIndices.length} phase(s) in the inactive branch as skipped`)
+        }
       }
       i++
     }
@@ -230,10 +253,23 @@ async function executeLoopBody(
 ): Promise<{creditsConsumed: number}> {
   let creditsConsumed = 0
   let i = 0
+  // Fresh per invocation (per outer iteration) — a branch decision inside a
+  // loop body can differ from one outer iteration to the next.
+  const skippedPhaseIndices = new Set<number>()
 
   while (i < phaseIndices.length) {
     const phaseIdx = phaseIndices[i]
     const phase = phases[phaseIdx]
+
+    if (skippedPhaseIndices.has(phaseIdx)) {
+      const lc = createLogCollector()
+      lc.info('Фаза пропущена — находится в неактивной ветке OR (Раздельные выходы)')
+      await finalizePhase(phase.id, true, {}, lc, 0, ExecutionStatus.SKIPPED)
+      console.log(`[ExecuteWorkflow] Phase "${phase.name}" skipped (inactive OR branch)`)
+      i++
+      continue
+    }
+
     const node = JSON.parse(phase.node) as AppNode
 
     if (node.data.type === TaskType.FOR_EACH) {
@@ -304,6 +340,13 @@ async function executeLoopBody(
       if (!result.success) {
         console.log(`[ExecuteWorkflow] Phase "${phase.name}" failed inside loop body — skipping rest of this iteration`)
         break
+      }
+      if (isBranchingCoalesce(node, TaskType.COALESCE)) {
+        const skipIndices = computeBranchSkipIndices(phases, node, enviroment, edges, phaseIdx + 1, phaseIndices)
+        for (const idx of skipIndices) skippedPhaseIndices.add(idx)
+        if (skipIndices.length > 0) {
+          console.log(`[ExecuteWorkflow] OR "${phase.name}" branched — marking ${skipIndices.length} phase(s) in the inactive branch as skipped`)
+        }
       }
       i++
     }
@@ -419,7 +462,8 @@ async function finalizePhase(
   success: boolean,
   outputs: Record<string, string>,
   logCollector: LogCollector,
-  creditsConsumed: number
+  creditsConsumed: number,
+  statusOverride?: ExecutionStatus
 ) {
   const logs = logCollector.getAll()
   await prisma.$transaction(
@@ -428,7 +472,7 @@ async function finalizePhase(
         .update({
           where: {id: phaseId},
           data: {
-            status: success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
+            status: statusOverride ?? (success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED),
             completedAt: new Date(),
             outputs: JSON.stringify(outputs),
             creditsConsumed

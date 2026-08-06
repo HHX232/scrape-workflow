@@ -105,10 +105,34 @@ function DynamicOutputs({ nodeId, count, prefix }: { nodeId: string; count: numb
   )
 }
 
+// Applies task.conditionalOutputs: when a node's toggle input is 'true', the
+// declared whenTrue outputs replace the named base outputs for THIS node
+// instance (base outputs list itself never changes — it's per node type).
+type OutputParam = {name: string; type: TaskParamType; [key: string]: unknown}
+
+function resolveOutputs(task: {outputs?: readonly OutputParam[]} | undefined, nodeData: AppNodeData): OutputParam[] {
+  const groups = (task as any)?.conditionalOutputs as
+    | { flagInput: string; whenTrue: OutputParam[]; replaces: string[] }[]
+    | undefined
+  const baseOutputs: OutputParam[] = task?.outputs ? [...task.outputs] : []
+  if (!groups || groups.length === 0) return baseOutputs
+
+  const replacedNames = new Set<string>()
+  const extraOutputs: OutputParam[] = []
+  for (const group of groups) {
+    if (nodeData.inputs?.[group.flagInput] === 'true') {
+      group.replaces.forEach(name => replacedNames.add(name))
+      extraOutputs.push(...group.whenTrue)
+    }
+  }
+  return [...baseOutputs.filter(o => !replacedNames.has(o.name)), ...extraOutputs]
+}
+
 const NodeComponent = memo((props: NodeProps) => {
   const nodeData = props.data as AppNodeData
   const task = TaskRegistry[nodeData.type]
   const count = nodeData.dynamicInputCount ?? 1
+  const outputs = resolveOutputs(task, nodeData)
 
   return (
     <NodeCard isSelected={!!props.selected} nodeId={props.id}>
@@ -135,7 +159,7 @@ const NodeComponent = memo((props: NodeProps) => {
         {task?.dynamicOutputPrefix && (
           <DynamicOutputs nodeId={props.id} count={count} prefix={task.dynamicOutputPrefix} />
         )}
-        {task?.outputs?.map(output => <NodeOutput key={output.name} output={output} nodeId={props.id} />)}
+        {outputs.map(output => <NodeOutput key={output.name} output={output} nodeId={props.id} />)}
       </NodeOutputs>
     </NodeCard>
   )

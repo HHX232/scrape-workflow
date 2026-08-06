@@ -19,6 +19,7 @@ export async function CoalesceExecutor(
     const valueB = enviroment.getInput('Value B')
     const selector = enviroment.getInput('Selector')
     const pageSelector = enviroment.getInput('Page selector')
+    const separateOutputs = enviroment.getInput('Раздельные выходы' as never) === 'true'
 
     let useA: boolean
 
@@ -47,7 +48,23 @@ export async function CoalesceExecutor(
       enviroment.log.info(`OR: Value A ${useA ? 'не пустой' : 'пустой'} → используем ${useA ? 'A' : 'B'}`)
     }
 
-    enviroment.setOutput('Result', (useA ? valueA : valueB) ?? '')
+    // Скрытый маркер для движка (не объявлен как настоящий output, не рисуется
+    // в UI) — по нему ExecuteWorkflow определяет, какая ветка выбрана, чтобы
+    // пропустить эксклюзивную часть невыбранной, не полагаясь на "пустое ли
+    // значение" (значение само по себе может законно быть пустой строкой).
+    ;(enviroment as any).setOutput('__branch', useA ? 'A' : 'B')
+
+    if (separateOutputs) {
+      enviroment.setOutput('Value Output A' as never, useA ? (valueA ?? '') : '')
+      enviroment.setOutput('Value Output B' as never, !useA ? (valueB ?? '') : '')
+      // Page Output A/B — BROWSER_INSTANCE, чисто структурные маркеры для
+      // BFS движка (как и все BROWSER_INSTANCE outputs в этом приложении,
+      // ни один executor их значение не пишет). Реальная страница всегда
+      // идёт через enviroment.getPage()/setPage(), не через эти рёбра.
+    } else {
+      enviroment.setOutput('Result', (useA ? valueA : valueB) ?? '')
+    }
+
     return true
   } catch (error) {
     enviroment.log.error('Error in OR (Coalesce) block')

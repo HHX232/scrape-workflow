@@ -19,6 +19,9 @@ export type WorkflowTask = {
   dynamicInputPrefix?: string
   dynamicOutputPrefix?: string
   extraDynamicInputs?: { prefix: string; addLabel?: string }
+  // Toggle-controlled output sets: when node.data.inputs[flagInput] === 'true',
+  // whenTrue outputs replace the ones listed in `replaces` (by name).
+  conditionalOutputs?: { flagInput: string; whenTrue: TaskParam[]; replaces: string[] }[]
 }
 
 export type WorkflowExecutionPlanPhase = {
@@ -32,7 +35,8 @@ export enum ExecutionStatus {
   PENDING = 'PENDING',
   RUNNING = 'RUNNING',
   COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED'
+  FAILED = 'FAILED',
+  SKIPPED = 'SKIPPED'
 }
 export enum WorkflowExecutionStatus {
   PENDING = 'PENDING',

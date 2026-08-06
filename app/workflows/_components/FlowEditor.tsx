@@ -147,6 +147,22 @@ export default function FlowEditor({workflow}: {workflow: Workflow}) {
       if (!output && sourceTask?.dynamicOutputPrefix && connection.sourceHandle?.startsWith(sourceTask.dynamicOutputPrefix)) {
         output = {name: connection.sourceHandle, type: TaskParamType.STRING}
       }
+      // Toggle-controlled output sets (e.g. OR "Раздельные выходы") aren't in
+      // the static task.outputs list — only present when the flag is on for
+      // THIS node instance.
+      if (!output) {
+        const conditionalGroups = (sourceTask as any)?.conditionalOutputs as
+          | {flagInput: string; whenTrue: {name: string; type: TaskParamType}[]}[]
+          | undefined
+        for (const group of conditionalGroups ?? []) {
+          if (source.data.inputs?.[group.flagInput] !== 'true') continue
+          const match = group.whenTrue.find((o) => o.name === connection.sourceHandle)
+          if (match) {
+            output = match
+            break
+          }
+        }
+      }
 
       const targetHandleName = connection.targetHandle?.includes('-input-')
         ? connection.targetHandle.split('-input-')[1]?.trim()
