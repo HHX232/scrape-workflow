@@ -25,5 +25,6 @@ export type ExecutionEnviroment<T extends WorkflowTask> = {
  __forEachIndex?: number
   __accumulators?: Record<string, any>
   __dynamicInputCount?: number
+  __excludeCount?: number
   log: LogCollector;
 }

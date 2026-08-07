@@ -707,6 +707,9 @@ function createExecutionEnviroment(
     },
     get __dynamicInputCount() {
       return (enviroment as any).__dynamicInputCount
+    },
+    get __excludeCount() {
+      return (enviroment as any).__excludeCount
     }
   }
 }
