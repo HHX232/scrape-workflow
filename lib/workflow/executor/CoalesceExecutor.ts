@@ -2,8 +2,16 @@ import { ExecutionEnviroment } from '@/types/Enviroment'
 import { CoalesceTask } from '../task/CoalesceTask'
 import * as cheerio from 'cheerio'
 
+// Держим в синхроне с PLACEHOLDER в ExtractTextFromElementExecutor.ts — это
+// его строка-заглушка "селектор ничего не нашёл", а не реальные данные.
+// Без этой проверки OR видит непустую строку и берёт заглушку вместо того,
+// чтобы переключиться на рабочий Value B (реальный баг: OR "выигрывал"
+// плейсхолдером вместо валидного запасного значения).
+const NOT_FOUND_PLACEHOLDER = 'ТЕКСТ НЕ НАЙДЕН'
+
 function isEmpty(value: string): boolean {
   if (!value || value.trim() === '') return true
+  if (value.trim() === NOT_FOUND_PLACEHOLDER) return true
   try {
     const parsed = JSON.parse(value)
     if (Array.isArray(parsed)) return parsed.length === 0
