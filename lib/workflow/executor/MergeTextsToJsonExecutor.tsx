@@ -38,7 +38,7 @@ export async function MergeTextsToJsonExecutor(
     }
 
     enviroment.setOutput('JSON Object', JSON.stringify(result))
-    enviroment.log.info(`MergeTextsToJson: produced object with keys [${Object.keys(result).join(', ')}]`)
+    enviroment.log.info(`MergeTextsToJson result: ${JSON.stringify(result)}`)
     return true
   } catch (error: any) {
     enviroment.log.error(`MergeTextsToJson error: ${error?.message ?? error}`)

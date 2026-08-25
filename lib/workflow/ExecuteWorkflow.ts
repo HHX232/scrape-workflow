@@ -172,7 +172,14 @@ export async function ExecuteWorkflow(executionId: string, nextRunAt?: Date) {
     executionFailed = true
   }
 
-  await finalizeWorkflowExecution(executionId, execution.workflowId, executionFailed, creditsConsumed, executionCancelled)
+  // finalizeWorkflowExecution can itself throw (e.g. a transient DB outage) —
+  // must not skip browser cleanup below when that happens, or the Puppeteer
+  // process leaks and keeps running after the execution is already dead.
+  try {
+    await finalizeWorkflowExecution(executionId, execution.workflowId, executionFailed, creditsConsumed, executionCancelled)
+  } catch (err) {
+    console.error('Failed to finalize workflow execution (DB unreachable?):', err)
+  }
   await cleanupEnviroment(enviroment)
   revalidatePath(`/workflow/runs/`)
 }

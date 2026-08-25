@@ -37,6 +37,13 @@ export const GetAllLinksInBoxTask = {
       required: false,
       hideHandle: true,
       helpText: 'Убрать :nth-child(N) из конца селектора и взять все похожие элементы'
+    },
+    {
+      name: 'Fallback: текущий URL',
+      type: TaskParamType.BOOLEAN,
+      required: false,
+      hideHandle: true,
+      helpText: 'Если контейнер не найден — вернуть текущий URL страницы как единственную ссылку, вместо пустого списка. Полезно для категорий, которые сами уже являются страницей с товарами (без дальнейшего деления).'
     }
   ] as const,
   extraDynamicInputs: { prefix: 'Exclude Selector', addLabel: 'добавить исключение' },

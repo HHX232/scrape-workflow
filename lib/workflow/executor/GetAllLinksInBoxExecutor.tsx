@@ -45,6 +45,18 @@ export async function GetAllLinksInBoxExecutor(
     }
 
     if (container.length === 0) {
+      const fallbackToCurrentUrl = enviroment.getInput('Fallback: текущий URL' as never) === 'true'
+      if (fallbackToCurrentUrl) {
+        const currentUrl = enviroment.getPage()?.url()
+        if (currentUrl) {
+          enviroment.log.info(
+            `GetAllLinksInBox: no elements found (tried: ${candidates.join(' → ')}) — fallback: возвращаем текущий URL страницы (${currentUrl})`
+          )
+          enviroment.setOutput('Links', JSON.stringify([currentUrl]))
+          enviroment.setOutput('Count', '1')
+          return true
+        }
+      }
       enviroment.log.info(
         `GetAllLinksInBox: no elements found (tried: ${candidates.join(' → ')}) — returning empty`
       )
