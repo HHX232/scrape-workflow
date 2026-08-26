@@ -1,59 +1,48 @@
+// Maps any recognized spelling (English short code, English long form, or
+// Russian variants/declensions) to the canonical English short code that the
+// downstream schema expects (e.g. "kg"). This used to return a Russian
+// long-form word instead, which an AI call (563be0f9) then had to translate
+// into the short code on every product — now parseUnit does that directly.
 const UNIT_MAP: Record<string, string> = {
-  // English keys
-  mg: "миллиграмм",
-  g: "грамм",
-  kg: "килограмм",
-  c: "центнер",
-  t: "тонна",
-  ml: "миллилитр",
-  l: "литр",
-  hl: "гектолитр",
-  m3: "метр³",
-  m2: "метр²",
-  cm2: "сантиметр²",
-  pcs: "штука",
-  pack: "упаковка",
-  m: "метр",
-  cm: "сантиметр",
-  pair: "пара",
-  set: "комплект",
-  box: "коробка",
-  bag: "мешок",
+  // English keys (already canonical)
+  mg: "mg", g: "g", kg: "kg", c: "c", t: "t", ml: "ml", l: "l", hl: "hl",
+  m3: "m3", m2: "m2", cm2: "cm2", pcs: "pcs", pack: "pack", m: "m", cm: "cm",
+  pair: "pair", set: "set", box: "box", bag: "bag",
   // Russian keys
-  мг: "миллиграмм",
-  г: "грамм",
-  гр: "грамм",
-  кг: "килограмм",
-  кило: "килограмм",
-  килограмм: "килограмм",
-  ц: "центнер",
-  центнер: "центнер",
-  т: "тонна",
-  тонна: "тонна",
-  тонн: "тонна",
-  мл: "миллилитр",
-  л: "литр",
-  литр: "литр",
-  гл: "гектолитр",
-  м: "метр",
-  см: "сантиметр",
-  м3: "метр³",
-  м2: "метр²",
-  см2: "сантиметр²",
-  шт: "штука",
-  штука: "штука",
-  штук: "штука",
-  уп: "упаковка",
-  упак: "упаковка",
-  упаковка: "упаковка",
-  пар: "пара",
-  пара: "пара",
-  компл: "комплект",
-  комплект: "комплект",
-  кор: "коробка",
-  коробка: "коробка",
-  меш: "мешок",
-  мешок: "мешок",
+  мг: "mg",
+  г: "g",
+  гр: "g",
+  кг: "kg",
+  кило: "kg",
+  килограмм: "kg",
+  ц: "c",
+  центнер: "c",
+  т: "t",
+  тонна: "t",
+  тонн: "t",
+  мл: "ml",
+  л: "l",
+  литр: "l",
+  гл: "hl",
+  м: "m",
+  см: "cm",
+  м3: "m3",
+  м2: "m2",
+  см2: "cm2",
+  шт: "pcs",
+  штука: "pcs",
+  штук: "pcs",
+  уп: "pack",
+  упак: "pack",
+  упаковка: "pack",
+  пар: "pair",
+  пара: "pair",
+  компл: "set",
+  комплект: "set",
+  кор: "box",
+  коробка: "box",
+  меш: "bag",
+  мешок: "bag",
 };
 
 function parseUnit(raw: string): string {
@@ -75,14 +64,8 @@ function parseUnit(raw: string): string {
 
   if (!foundKey) return raw.trim()
 
-  // Извлекаем минимальное количество: "от 1 до 40" → 1, "от 1" → 1, "1" → 1
-  const fromMatch = normalized.match(/от\s+(\d+)/)
-  const plainMatch = normalized.match(/(\d+)/)
-  const hasFrom = !!fromMatch
-  const minQty = fromMatch ? fromMatch[1] : plainMatch ? plainMatch[1] : null
-
-  if (minQty && hasFrom) return `от ${minQty} ${foundKey}`
-  if (minQty) return `${minQty} ${foundKey}`
+  // Единица возвращается как чистый код без префикса количества — тот же
+  // формат, что раньше отдавал AI-вызов ("от 5 килограмм" → "kg").
   return UNIT_MAP[foundKey]
 }
 

@@ -28,6 +28,13 @@ export const ExtractDataWithAITask = {
       required: true,
       hideHandle: false,
       variant: 'textarea'
+    },
+    {
+      name: 'Skip Marker',
+      type: TaskParamType.BROWSER_INSTANCE,
+      required: false,
+      hideHandle: false,
+      helpText: 'Чисто структурный вход — не используется исполнителем. Нужен только чтобы подключить эту ноду к неактивной ветке OR (Раздельные выходы), чтобы AI-вызов пропускался целиком, когда результат уже не нужен.'
     }
   ] as const,
   outputs: [{name: 'Extracted data', type: TaskParamType.STRING, variant: 'textarea'}] as const
